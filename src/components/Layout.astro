@@ -1,0 +1,26 @@
+---
+import '../styles/global.css';
+const { title = 'Museu d’Informàtica', description = 'Museu d’Informàtica de l’IES l’Estació, Ontinyent.' } = Astro.props;
+const path = Astro.url.pathname;
+const nav = [
+  ['/', 'Inici'], ['/cataleg/', 'Catàleg'], ['/activitats/', 'Activitats'], ['/donacions/', 'Donacions'], ['/col·labora/', 'Col·labora']
+];
+---
+<!doctype html>
+<html lang="ca">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title} · IES l’Estació</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#contingut">Vés al contingut principal</a>
+    <header class="site-header">
+      <a class="brand" href={import.meta.env.BASE_URL} aria-label="Museu d’Informàtica, inici"><span aria-hidden="true">▣</span><span>Museu<br /><b>d’Informàtica</b></span></a>
+      <nav aria-label="Navegació principal"><ul>{nav.map(([href, label]) => <li><a href={`${import.meta.env.BASE_URL}${href.slice(1)}`} aria-current={path.endsWith(href) ? 'page' : undefined}>{label}</a></li>)}</ul></nav>
+    </header>
+    <main id="contingut"><slot /></main>
+    <footer class="site-footer"><div><a class="brand" href={import.meta.env.BASE_URL}><span aria-hidden="true">▣</span><span>Museu d’Informàtica<br /><b>IES l’Estació</b></span></a><p>Memòria digital als corredors de FP.<br />Ontinyent · País Valencià</p></div><div><a href="mailto:museu.informatica@iesestacio.com">museu.informatica@iesestacio.com</a><p>Projecte educatiu obert a la comunitat.</p></div></footer>
+  </body>
+</html>

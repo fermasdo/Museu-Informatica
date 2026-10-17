@@ -1,0 +1,11 @@
+---
+import Layout from '../components/Layout.astro';
+import Catalogue from '../components/Catalogue.astro';
+---
+<Layout title="Museu d’Informàtica" description="Tecnologia amb memòria als corredors de Formació Professional de l’IES l’Estació d’Ontinyent.">
+  <section class="hero"><div class="hero-copy"><p class="eyebrow">IES L’ESTACIÓ · ONTINYENT</p><h1>La tecnologia<br />té <em>memòria.</em></h1><p class="lead">Un museu que es recorre entre classes: màquines, jocs i idees que van imaginar el nostre present.</p><div class="actions"><a class="button" href={`${import.meta.env.BASE_URL}cataleg/`}>Entrar al catàleg <span aria-hidden="true">→</span></a><a class="button button-quiet" href="#visita">Planifica la visita</a></div></div><div class="hero-object" aria-label="Il·lustració abstracta d’un ordinador retro"><span>READY<br />_</span><i></i><b></b></div></section>
+  <section class="ticker" aria-label="Informació destacada"><span>▸ OBERT ALS CORREDORS DE FP</span><span>▸ OBJECTES QUE EXPLIQUEN HISTÒRIES</span><span>▸ APRENDRE TOCANT EL PASSAT</span></section>
+  <Catalogue limit={3} />
+  <section id="visita" class="visit"><div><p class="eyebrow">NO ÉS DARRERE D’UNA VITRINA</p><h2>El museu està<br />en el teu camí.</h2></div><div><p>La col·lecció habita els <strong>corredors de Formació Professional</strong> de l’IES l’Estació. Veure una peça és tan senzill com alçar la vista mentre canvies d’aula.</p><ul><li><b>A</b> Històries de l’ordinador personal</li><li><b>B</b> Jugar, comunicar-se, connectar</li><li><b>⌂</b> Biblioteca i manuals per consultar</li></ul></div></section>
+  <section class="participate"><p class="eyebrow">EL MUSEU EL FEM ENTRE TOTES</p><h2>Tens una màquina<br />que encara conta coses?</h2><a class="button" href={`${import.meta.env.BASE_URL}donacions/`}>Parlem-ne <span aria-hidden="true">→</span></a></section>
+</Layout>
