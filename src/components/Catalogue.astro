@@ -8,14 +8,51 @@ const shown = limit ? pieces.slice(0, limit) : pieces;
   <div class="section-heading"><p class="eyebrow">COL·LECCIÓ VIVA</p><h2 id="catalogue-title">{limit ? 'Una selecció per començar' : 'Explora les peces'}</h2></div>
   {!limit && <div class="filters" aria-label="Filtra el catàleg"><label>Cerca <input type="search" placeholder="Nom, any o paraula…" data-search /></label><label>Dècada <select data-filter="decade"><option value="">Totes</option><option>1960</option><option>1980</option><option>1990</option><option>2000</option></select></label><label>Tipologia <select data-filter="type"><option value="">Totes</option><option>Ordinador</option><option>Consola</option><option>Perifèric</option><option>Documentació</option></select></label><label>Ubicació <select data-filter="location"><option value="">Totes</option><option>Corredor A</option><option>Corredor B</option><option>Biblioteca</option></select></label></div>}
   <p class="result-count" data-count aria-live="polite"></p>
-  <div class="pieces-grid">{shown.map((piece) => <PieceCard {piece} />)}</div>
+  <div class="pieces-grid" data-pieces-grid data-limit={limit ?? ''}>{shown.map((piece) => <PieceCard {piece} />)}</div>
   {limit && <a class="text-link" href={`${import.meta.env.BASE_URL}cataleg/`}>Veure les {pieces.length} peces de mostra <span aria-hidden="true">→</span></a>}
 </section>
-{!limit && <script>
-  const cards = [...document.querySelectorAll<HTMLElement>('[data-piece]')];
-  const search = document.querySelector<HTMLInputElement>('[data-search]');
+  <script>
+    import { supabase } from '../lib/supabase';
+    type RemotePiece = { title: string; description: string | null; manufacturer: string | null; model: string | null; production_year_start: number | null; period_label: string | null; object_types: { name: string } | null; cabinets: { code: string; room: string } | null };
+    const grid = document.querySelector<HTMLElement>('[data-pieces-grid]');
+    const makeCard = (piece: RemotePiece) => {
+      const card = document.createElement('article');
+      const year = piece.production_year_start ? String(piece.production_year_start) : (piece.period_label || 'Sense data');
+      const type = piece.object_types?.name || 'Sense tipologia';
+      const location = piece.cabinets ? `${piece.cabinets.code} · ${piece.cabinets.room}` : 'Ubicació en revisió';
+      card.className = 'piece-card'; card.dataset.piece = ''; card.dataset.decade = piece.production_year_start ? `${Math.floor(piece.production_year_start / 10) * 10}` : ''; card.dataset.type = type; card.dataset.location = piece.cabinets?.room || location;
+      const mark = document.createElement('div'); mark.className = 'piece-mark'; mark.setAttribute('aria-hidden', 'true'); mark.textContent = (piece.manufacturer || type).slice(0, 3).toUpperCase();
+      const details = document.createElement('div');
+      const eyebrow = document.createElement('p'); eyebrow.className = 'eyebrow'; eyebrow.textContent = `${year} · ${type}`;
+      const heading = document.createElement('h3'); heading.textContent = piece.title;
+      const note = document.createElement('p'); note.textContent = piece.description || [piece.manufacturer, piece.model].filter(Boolean).join(' · ') || 'Fitxa del Museu d’Informàtica.';
+      const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = location;
+      details.append(eyebrow, heading, note, tag); card.append(mark, details); return card;
+    };
+    if (supabase && grid) {
+      const { data, error } = await supabase.from('catalog_objects').select('title, description, manufacturer, model, production_year_start, period_label, object_types(name), cabinets(code, room)').eq('status', 'published').order('published_at', { ascending: false });
+      if (!error && data?.length) {
+        const limit = Number(grid.dataset.limit) || undefined;
+        // Supabase cannot infer this many-to-one relationship without generated database types.
+        const remotePieces = data as unknown as RemotePiece[];
+        grid.replaceChildren(...(limit ? remotePieces.slice(0, limit) : remotePieces).map(makeCard));
+        populateFilters(remotePieces);
+        document.dispatchEvent(new Event('catalogue:updated'));
+      }
+    }
+    function populateFilters(data: RemotePiece[]) {
+      const values = { type: new Set(data.map(p => p.object_types?.name).filter(Boolean)), location: new Set(data.map(p => p.cabinets?.room).filter(Boolean)) };
+      (Object.entries(values) as [string, Set<string>][]).forEach(([key, choices]) => {
+        const select = document.querySelector<HTMLSelectElement>(`[data-filter="${key}"]`); if (!select) return;
+        [...choices].forEach(value => { if (![...select.options].some(option => option.value === value)) { const option = new Option(value, value); select.add(option); } });
+      });
+    }
+  </script>
+  {!limit && <script>
+   const search = document.querySelector<HTMLInputElement>('[data-search]');
   const filters = [...document.querySelectorAll<HTMLSelectElement>('[data-filter]')];
   const count = document.querySelector<HTMLElement>('[data-count]');
-  function update() { const term = search?.value.toLowerCase() ?? ''; let visible = 0; cards.forEach(card => { const matches = !term || card.textContent?.toLowerCase().includes(term); const choices = filters.every(f => !f.value || card.dataset[f.dataset.filter!] === f.value); card.hidden = !(matches && choices); if (!card.hidden) visible++; }); if (count) count.textContent = `${visible} ${visible === 1 ? 'peça trobada' : 'peces trobades'}`; }
-  search?.addEventListener('input', update); filters.forEach(filter => filter.addEventListener('change', update)); update();
+   function update() { const term = search?.value.toLowerCase() ?? ''; let visible = 0; document.querySelectorAll<HTMLElement>('[data-piece]').forEach(card => { const matches = !term || card.textContent?.toLowerCase().includes(term); const choices = filters.every(f => !f.value || card.dataset[f.dataset.filter!] === f.value); card.hidden = !(matches && choices); if (!card.hidden) visible++; }); if (count) count.textContent = `${visible} ${visible === 1 ? 'peça trobada' : 'peces trobades'}`; }
+   search?.addEventListener('input', update); filters.forEach(filter => filter.addEventListener('change', update)); update();
+   document.addEventListener('catalogue:updated', update);
 </script>}

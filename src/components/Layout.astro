@@ -18,9 +18,21 @@ const nav = [
     <a class="skip-link" href="#contingut">Vés al contingut principal</a>
     <header class="site-header">
       <a class="brand" href={import.meta.env.BASE_URL} aria-label="Museu d’Informàtica, inici"><span aria-hidden="true">▣</span><span>Museu<br /><b>d’Informàtica</b></span></a>
-      <nav aria-label="Navegació principal"><ul>{nav.map(([href, label]) => <li><a href={`${import.meta.env.BASE_URL}${href.slice(1)}`} aria-current={path.endsWith(href) ? 'page' : undefined}>{label}</a></li>)}</ul></nav>
+      <div class="header-navigation"><nav aria-label="Navegació principal"><ul>{nav.map(([href, label]) => <li><a href={`${import.meta.env.BASE_URL}${href.slice(1)}`} aria-current={path.endsWith(href) ? 'page' : undefined}>{label}</a></li>)}</ul></nav><a class="access-status" href={`${import.meta.env.BASE_URL}col·labora/`} data-access-status>Accés</a></div>
     </header>
     <main id="contingut"><slot /></main>
     <footer class="site-footer"><div><a class="brand" href={import.meta.env.BASE_URL}><span aria-hidden="true">▣</span><span>Museu d’Informàtica<br /><b>IES l’Estació</b></span></a><p>Memòria digital als corredors de FP.<br />Ontinyent · País Valencià</p></div><div><a href="mailto:museu.informatica@iesestacio.com">museu.informatica@iesestacio.com</a><p>Projecte educatiu obert a la comunitat.</p></div></footer>
+    <script>
+      import { supabase } from '../lib/supabase';
+      const access = document.querySelector<HTMLAnchorElement>('[data-access-status]');
+      if (access && supabase) {
+        supabase.auth.getSession().then(({ data }) => {
+          access.textContent = data.session ? 'El meu espai' : 'Accés';
+        });
+        supabase.auth.onAuthStateChange((_event, session) => {
+          access.textContent = session ? 'El meu espai' : 'Accés';
+        });
+      }
+    </script>
   </body>
 </html>

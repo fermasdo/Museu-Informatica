@@ -1,5 +1,5 @@
 -- Museu d'Informàtica IES l'Estació
--- Esquema inicial versionat: 1.0.0 (2026-10-17)
+-- Esquema inicial versionat: 1.1.0 (2026-10-17)
 -- Apliqueu-lo només a un projecte Supabase nou o mitjançant una migració inicial.
 
 create extension if not exists pgcrypto;
@@ -12,20 +12,24 @@ create type public.object_condition as enum ('excellent', 'good', 'fair', 'poor'
 create type public.proposal_status as enum ('open', 'accepted', 'rejected', 'implemented');
 create type public.activity_kind as enum ('gymkhana', 'cinema', 'library');
 
--- Un perfil és creat automàticament per al seu usuari d'Auth. Els rols elevats
--- no es poden escollir en el registre del client.
+-- requested_role és una petició validada, mai una concessió de privilegis.
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text not null check (char_length(trim(display_name)) between 2 and 100),
   role public.profile_role not null default 'visitor',
+  requested_role text check (requested_role is null or requested_role in ('student', 'teacher')),
   approval_status public.approval_state not null default 'not_required',
   approved_by uuid references public.profiles(id) on delete set null,
   approved_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint profiles_approval_consistency check (
-    (role = 'student' and approval_status in ('pending', 'approved', 'rejected'))
-    or (role <> 'student' and approval_status = 'not_required')
+    (role = 'visitor' and requested_role is null and approval_status = 'not_required')
+    or (role = 'visitor' and requested_role = 'teacher'
+        and approval_status in ('pending', 'rejected'))
+    or (role = 'student' and requested_role = 'student'
+        and approval_status in ('pending', 'approved', 'rejected'))
+    or (role = 'teacher' and requested_role = 'teacher' and approval_status = 'approved')
   ),
   constraint profiles_approval_audit check (
     (approval_status = 'approved' and approved_by is not null and approved_at is not null)
@@ -166,6 +170,8 @@ create index catalog_objects_creator_idx on public.catalog_objects (created_by, 
 create index object_photos_object_idx on public.object_photos (object_id, position);
 create index change_proposals_submitter_idx on public.change_proposals (submitted_by, status, created_at desc);
 create index donation_contacts_status_idx on public.donation_contacts (status, created_at desc);
+create index profiles_pending_teacher_requests_idx on public.profiles (created_at asc)
+  where requested_role = 'teacher' and approval_status = 'pending';
 
 create or replace function public.set_updated_at()
 returns trigger language plpgsql set search_path = public as $$
@@ -177,13 +183,17 @@ $$;
 
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  requested text := new.raw_user_meta_data ->> 'requested_role';
 begin
-  insert into public.profiles (id, display_name, role, approval_status)
+  insert into public.profiles (id, display_name, role, requested_role, approval_status)
   values (
     new.id,
     coalesce(nullif(trim(new.raw_user_meta_data ->> 'display_name'), ''), 'Visitant'),
-    'visitor',
-    'not_required'
+    case when requested = 'student' then 'student'::public.profile_role else 'visitor'::public.profile_role end,
+    case when requested in ('student', 'teacher') then requested else null end,
+    case when requested in ('student', 'teacher') then 'pending'::public.approval_state
+         else 'not_required'::public.approval_state end
   );
   return new;
 end;
@@ -192,30 +202,41 @@ $$;
 -- Impedeix que un usuari es concedisca privilegis o s'aprove a si mateix.
 create or replace function public.protect_profile_privileges()
 returns trigger language plpgsql set search_path = public as $$
-begin
-  if auth.uid() = old.id and (
-    new.role is distinct from old.role
+declare
+  privilege_changed boolean := new.role is distinct from old.role
+    or new.requested_role is distinct from old.requested_role
     or new.approval_status is distinct from old.approval_status
     or new.approved_by is distinct from old.approved_by
-    or new.approved_at is distinct from old.approved_at
-  ) then
-    raise exception 'No pots modificar el rol ni l''aprovació del teu perfil';
+    or new.approved_at is distinct from old.approved_at;
+begin
+  if not privilege_changed then return new; end if;
+  if public.is_administrator() then
+    if old.role = 'visitor' and old.requested_role = 'teacher' and old.approval_status = 'pending'
+       and new.requested_role = 'teacher' then
+      if new.role = 'teacher' and new.approval_status = 'approved' then
+        new.approved_by := auth.uid(); new.approved_at := now(); return new;
+      elsif new.role = 'visitor' and new.approval_status = 'rejected' then
+        new.approved_by := null; new.approved_at := null; return new;
+      end if;
+    elsif old.role = 'student' and old.approval_status = 'pending' and new.role = 'student'
+       and new.requested_role is not distinct from old.requested_role then
+      if new.approval_status = 'approved' then
+        new.approved_by := auth.uid(); new.approved_at := now(); return new;
+      elsif new.approval_status = 'rejected' then
+        new.approved_by := null; new.approved_at := null; return new;
+      end if;
+    end if;
+    raise exception 'Transició de rol o aprovació no permesa';
   end if;
-
-  if public.is_teacher() and new.role = 'student' and old.role <> 'student' then
-    new.approval_status := 'pending';
-    new.approved_by := null;
-    new.approved_at := null;
-  elsif public.is_teacher() and new.role <> 'student' then
-    new.approval_status := 'not_required';
-    new.approved_by := null;
-    new.approved_at := null;
-  elsif public.is_teacher() and new.approval_status = 'approved'
-        and old.approval_status is distinct from 'approved' then
-    new.approved_by := auth.uid();
-    new.approved_at := now();
+  if public.is_teacher() and old.role = 'student' and new.role = 'student'
+     and new.requested_role is not distinct from old.requested_role and old.approval_status = 'pending' then
+    if new.approval_status = 'approved' then
+      new.approved_by := auth.uid(); new.approved_at := now(); return new;
+    elsif new.approval_status = 'rejected' then
+      new.approved_by := null; new.approved_at := null; return new;
+    end if;
   end if;
-  return new;
+  raise exception 'No tens permís per modificar el rol o l''aprovació del perfil';
 end;
 $$;
 
@@ -232,6 +253,11 @@ end;
 $$;
 
 -- Funcions SECURITY DEFINER petites per evitar recursió de RLS. No retornen dades.
+create or replace function public.is_administrator()
+returns boolean language sql stable security definer set search_path = pg_catalog as $$
+  select lower(coalesce(auth.jwt() ->> 'email', '')) = 'f.masdomenech@edu.gva.es';
+$$;
+
 create or replace function public.is_teacher()
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (
@@ -287,16 +313,20 @@ alter table public.change_proposals enable row level security;
 alter table public.activities enable row level security;
 alter table public.donation_contacts enable row level security;
 
--- Perfils: cada persona veu/edita les seues dades bàsiques; el professorat gestiona rols i aprovacions.
-create policy "profiles: own or teacher read" on public.profiles for select to authenticated
-  using (id = auth.uid() or public.is_teacher());
-create policy "profiles: own or teacher update" on public.profiles for update to authenticated
-  using (id = auth.uid() or public.is_teacher())
-  with check (id = auth.uid() or public.is_teacher());
+-- Perfils: no contenen correus. L'administrador gestiona tots els perfils i el
+-- professorat ordinari només veu o resol sol·licituds d'alumnat.
+create policy "profiles: own, student manager or admin read" on public.profiles for select to authenticated
+  using (id = auth.uid() or public.is_administrator()
+    or (public.is_teacher() and role = 'student'));
+create policy "profiles: own, student manager or admin update" on public.profiles for update to authenticated
+  using (id = auth.uid() or public.is_administrator()
+    or (public.is_teacher() and role = 'student'))
+  with check (id = auth.uid() or public.is_administrator()
+    or (public.is_teacher() and role = 'student'));
 create policy "profiles: direct insert disabled" on public.profiles for insert to authenticated
   with check (false);
-create policy "profiles: teachers delete" on public.profiles for delete to authenticated
-  using (public.is_teacher());
+create policy "profiles: administrators delete" on public.profiles for delete to authenticated
+  using (public.is_administrator());
 
 -- Taules auxiliars internes: necessàries als col·laboradors, no al públic anònim.
 create policy "object types: collaborators read" on public.object_types for select to authenticated
@@ -358,7 +388,7 @@ create policy "donation contacts: teachers manage" on public.donation_contacts f
   using (public.is_teacher()) with check (public.is_teacher());
 
 -- Storage privat: el frontend només pot llegir fotos vinculades a fitxes publicades.
-alter table storage.objects enable row level security;
+-- Supabase ja aplica RLS a storage.objects; la taula és gestionada pel servei.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('catalog-photos', 'catalog-photos', false, 10485760, array['image/jpeg', 'image/png', 'image/webp'])
 on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit,
@@ -380,7 +410,10 @@ grant usage on schema public to anon, authenticated;
 grant select on public.catalog_objects, public.object_photos, public.activities to anon;
 grant insert on public.donation_contacts to anon;
 grant select, insert, update, delete on all tables in schema public to authenticated;
+revoke all on function public.is_administrator() from public;
+grant execute on function public.is_administrator() to authenticated;
 grant execute on function public.is_teacher(), public.is_approved_student(), public.can_read_catalog_photo(text) to anon, authenticated;
 
 comment on table public.donation_contacts is 'Dades de contacte privades; l''alta pública no implica lectura pública.';
 comment on table public.object_photos is 'Metadades d''imatges emmagatzemades al bucket privat catalog-photos.';
+comment on column public.profiles.requested_role is 'Petició validada en el registre: student o teacher. No concedeix privilegis per si mateixa.';
