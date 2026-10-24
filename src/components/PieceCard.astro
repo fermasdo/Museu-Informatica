@@ -3,7 +3,7 @@ import type { Piece } from '../data/pieces';
 const { piece } = Astro.props as { piece: Piece };
 ---
 <article class="piece-card" data-piece data-decade={piece.decade} data-type={piece.type} data-location={piece.location}>
-  <div class="piece-mark" aria-hidden="true">{piece.mark}</div>
+  <img class="piece-image" src={`${import.meta.env.BASE_URL}${piece.image}`} alt={piece.imageAlt} width="640" height="420" loading="lazy" decoding="async" />
   <div><p class="eyebrow">{piece.year} · {piece.type}</p><h3>{piece.name}</h3><p>{piece.note}</p></div>
-  <div class="piece-meta"><span class="tag">{piece.location}</span><span class="piece-index">REF. {piece.mark}</span></div>
+  <div class="piece-meta"><span class="tag">{piece.location}</span><span class="piece-index">{piece.mark} · {piece.owner}</span></div>
 </article>

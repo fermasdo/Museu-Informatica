@@ -1,0 +1,18 @@
+---
+import Layout from '../components/Layout.astro';
+import { pieces } from '../data/pieces';
+---
+<Layout title="Etiquetes d’inventari">
+  <section class="labels-page">
+    <p class="eyebrow">EINA DE MUNTATGE</p>
+    <h1>Etiquetes <em>d’inventari.</em></h1>
+    <p class="lead">Selecciona les peces que vols imprimir. Cada etiqueta inclou el codi, el títol i la propietat de la peça.</p>
+    <div class="label-controls"><button class="small-button" type="button" data-select-all>Selecciona totes</button><button class="button" type="button" data-print>Imprimeix les seleccionades</button></div>
+    <div class="label-grid">{pieces.map((piece) => <label class="print-label"><input type="checkbox" checked data-label /><p class="eyebrow">MUSEU D’INFORMÀTICA · IES L’ESTACIÓ</p><h2>{piece.name}</h2><p>{piece.year} · {piece.type}</p><p>Propietat: <strong>{piece.owner}</strong></p><code>{piece.mark}</code></label>)}</div>
+  </section>
+</Layout>
+<script>
+  const labels = [...document.querySelectorAll<HTMLInputElement>('[data-label]')];
+  document.querySelector<HTMLButtonElement>('[data-select-all]')?.addEventListener('click', () => labels.forEach((label) => label.checked = true));
+  document.querySelector<HTMLButtonElement>('[data-print]')?.addEventListener('click', () => { labels.forEach((label) => label.closest<HTMLElement>('.print-label')!.hidden = !label.checked); window.print(); labels.forEach((label) => label.closest<HTMLElement>('.print-label')!.hidden = false); });
+</script>

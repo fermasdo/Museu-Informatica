@@ -1,0 +1,23 @@
+---
+import { announcements } from '../data/announcements';
+const categories = [...new Set(announcements.map((announcement) => announcement.category))];
+const years = [...new Set(announcements.map((announcement) => announcement.year))].sort((a, b) => a - b);
+---
+<section class="announcements" aria-labelledby="announcements-title">
+  <div class="section-heading"><div><p class="eyebrow">ARXIU AUDIOVISUAL</p><h2 id="announcements-title">Anuncis que van encendre pantalles.</h2></div></div>
+  <div class="filters announcement-filters" aria-label="Filtra els anuncis"><label>Tipologia<select data-announcement-filter="category"><option value="">Totes</option>{categories.map((category) => <option value={category}>{category}</option>)}</select></label><label>Època<select data-announcement-filter="year"><option value="">Totes</option>{years.map((year) => <option value={String(year)}>{year}</option>)}</select></label><button class="filter-reset" type="button" data-announcement-reset>Netejar</button></div>
+  <p class="result-count" data-announcement-count aria-live="polite"></p>
+  <div class="announcement-grid">{announcements.map((announcement) => <article data-announcement data-category={announcement.category} data-year={announcement.year}><p class="eyebrow">{announcement.year} · {announcement.category}</p><h3>{announcement.title}</h3><p>{announcement.description}</p><a class="text-link" href={announcement.youtubeUrl} target="_blank" rel="noopener noreferrer">Cercar l’anunci a YouTube <span aria-hidden="true">↗</span></a></article>)}</div>
+</section>
+<script>
+  import { supabase } from '../lib/supabase';
+  const filters = [...document.querySelectorAll<HTMLSelectElement>('[data-announcement-filter]')];
+  const count = document.querySelector<HTMLElement>('[data-announcement-count]');
+  const reset = document.querySelector<HTMLButtonElement>('[data-announcement-reset]');
+  const grid = document.querySelector<HTMLElement>('.announcement-grid');
+  const update = () => { let visible = 0; document.querySelectorAll<HTMLElement>('[data-announcement]').forEach((card) => { const matches = filters.every((filter) => !filter.value || card.dataset[filter.dataset.announcementFilter!] === filter.value); card.hidden = !matches; if (matches) visible++; }); if (count) count.textContent = `${visible} ${visible === 1 ? 'anunci' : 'anuncis'} disponibles`; };
+  filters.forEach((filter) => filter.addEventListener('change', update));
+  reset?.addEventListener('click', () => { filters.forEach((filter) => filter.value = ''); update(); });
+  if (supabase && grid) { const { data } = await supabase.from('video_proposals').select('title, era, category, description, video_url').eq('status', 'approved').order('era'); data?.forEach((announcement) => { const card = document.createElement('article'); card.dataset.announcement = ''; card.dataset.category = announcement.category; card.dataset.year = String(announcement.era); const eyebrow = document.createElement('p'); eyebrow.className = 'eyebrow'; eyebrow.textContent = `${announcement.era} · ${announcement.category}`; const title = document.createElement('h3'); title.textContent = announcement.title; const description = document.createElement('p'); description.textContent = announcement.description || 'Anunci incorporat per la comunitat del museu.'; const link = document.createElement('a'); link.className = 'text-link'; link.href = announcement.video_url; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = 'Veure a YouTube ↗'; card.append(eyebrow, title, description, link); grid.append(card); }); update(); }
+  update();
+</script>
