@@ -4,5 +4,6 @@ const { piece } = Astro.props as { piece: Piece };
 ---
 <article class="piece-card" data-piece data-decade={piece.decade} data-type={piece.type} data-location={piece.location}>
   <div class="piece-mark" aria-hidden="true">{piece.mark}</div>
-  <div><p class="eyebrow">{piece.year} · {piece.type}</p><h3>{piece.name}</h3><p>{piece.note}</p><span class="tag">{piece.location}</span></div>
+  <div><p class="eyebrow">{piece.year} · {piece.type}</p><h3>{piece.name}</h3><p>{piece.note}</p></div>
+  <div class="piece-meta"><span class="tag">{piece.location}</span><span class="piece-index">REF. {piece.mark}</span></div>
 </article>
