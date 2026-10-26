@@ -13,31 +13,62 @@ const shown = limit ? pieces.slice(0, limit) : pieces;
 </section>
   <script>
     import { supabase } from '../lib/supabase';
-    type RemotePiece = { title: string; description: string | null; manufacturer: string | null; model: string | null; production_year_start: number | null; period_label: string | null; object_types: { name: string } | null; cabinets: { code: string; room: string } | null };
+    type RemotePiece = { id: string; title: string; description: string | null; manufacturer: string | null; model: string | null; production_year_start: number | null; period_label: string | null; object_types: { name: string } | null; cabinets: { code: string; room: string } | null };
+    type RemotePhoto = { object_id: string; storage_path: string; alt_text: string };
     const grid = document.querySelector<HTMLElement>('[data-pieces-grid]');
-    const makeCard = (piece: RemotePiece) => {
+    const makeCard = (piece: RemotePiece, photo?: RemotePhoto, imageUrl?: string) => {
       const card = document.createElement('article');
       const year = piece.production_year_start ? String(piece.production_year_start) : (piece.period_label || 'Sense data');
       const type = piece.object_types?.name || 'Sense tipologia';
       const location = piece.cabinets ? `${piece.cabinets.code} · ${piece.cabinets.room}` : 'Ubicació en revisió';
       card.className = 'piece-card'; card.dataset.piece = ''; card.dataset.decade = piece.production_year_start ? `${Math.floor(piece.production_year_start / 10) * 10}` : ''; card.dataset.type = type; card.dataset.location = piece.cabinets?.room || location;
-      const mark = document.createElement('div'); mark.className = 'piece-mark'; mark.setAttribute('aria-hidden', 'true'); mark.textContent = (piece.manufacturer || type).slice(0, 3).toUpperCase();
+      const makeMark = () => {
+        const mark = document.createElement('div');
+        mark.className = 'piece-mark';
+        mark.setAttribute('aria-hidden', 'true');
+        mark.textContent = (piece.manufacturer || type).slice(0, 3).toUpperCase();
+        return mark;
+      };
+      const image = photo && imageUrl ? document.createElement('img') : null;
+      if (image && photo && imageUrl) {
+        image.className = 'piece-image'; image.src = imageUrl; image.alt = photo.alt_text; image.width = 640; image.height = 420; image.loading = 'lazy'; image.decoding = 'async';
+        image.addEventListener('error', () => image.replaceWith(makeMark()), { once: true });
+      }
       const details = document.createElement('div');
       const eyebrow = document.createElement('p'); eyebrow.className = 'eyebrow'; eyebrow.textContent = `${year} · ${type}`;
-      const heading = document.createElement('h3'); heading.textContent = piece.title;
+      const heading = document.createElement('h3'); const link = document.createElement('a'); link.href = `${import.meta.env.BASE_URL}cataleg/detall/?id=${encodeURIComponent(piece.id)}`; link.textContent = piece.title; heading.append(link);
       const note = document.createElement('p'); note.textContent = piece.description || [piece.manufacturer, piece.model].filter(Boolean).join(' · ') || 'Fitxa del Museu d’Informàtica.';
        const meta = document.createElement('div'); meta.className = 'piece-meta';
        const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = location;
        const index = document.createElement('span'); index.className = 'piece-index'; index.textContent = `REF. ${(piece.manufacturer || type).slice(0, 3).toUpperCase()}`;
-       meta.append(tag, index); details.append(eyebrow, heading, note); card.append(mark, details, meta); return card;
+       meta.append(tag, index); details.append(eyebrow, heading, note); card.append(image || makeMark(), details, meta); return card;
     };
     if (supabase && grid) {
-      const { data, error } = await supabase.from('catalog_objects').select('title, description, manufacturer, model, production_year_start, period_label, object_types(name), cabinets(code, room)').eq('status', 'published').order('published_at', { ascending: false });
+      const limit = Number(grid.dataset.limit) || undefined;
+      let query = supabase.from('catalog_objects').select('id, title, description, manufacturer, model, production_year_start, period_label, object_types(name), cabinets(code, room)').eq('status', 'published').order('published_at', { ascending: false });
+      if (limit) query = query.limit(limit);
+      const { data, error } = await query;
       if (!error && data?.length) {
-        const limit = Number(grid.dataset.limit) || undefined;
         // Supabase cannot infer this many-to-one relationship without generated database types.
         const remotePieces = data as unknown as RemotePiece[];
-        grid.replaceChildren(...(limit ? remotePieces.slice(0, limit) : remotePieces).map(makeCard));
+        const shownPieces = limit ? remotePieces.slice(0, limit) : remotePieces;
+        const { data: photos } = await supabase.from('object_photos').select('object_id, storage_path, alt_text').in('object_id', shownPieces.map(piece => piece.id)).order('position');
+        const primaryPhotos = new Map<string, RemotePhoto>();
+        ((photos ?? []) as RemotePhoto[]).forEach(photo => {
+          if (!primaryPhotos.has(photo.object_id)) primaryPhotos.set(photo.object_id, photo);
+        });
+        const photoPaths = [...primaryPhotos.values()].map(photo => photo.storage_path);
+        const signedUrls = new Map<string, string>();
+        if (photoPaths.length) {
+          const { data: signedPhotos } = await supabase.storage.from('catalog-photos').createSignedUrls(photoPaths, 60 * 60);
+          signedPhotos?.forEach(({ path, signedUrl }) => {
+            if (path && signedUrl) signedUrls.set(path, signedUrl);
+          });
+        }
+        grid.replaceChildren(...shownPieces.map(piece => {
+          const photo = primaryPhotos.get(piece.id);
+          return makeCard(piece, photo, photo ? signedUrls.get(photo.storage_path) : undefined);
+        }));
         populateFilters(remotePieces);
         document.dispatchEvent(new Event('catalogue:updated'));
       }

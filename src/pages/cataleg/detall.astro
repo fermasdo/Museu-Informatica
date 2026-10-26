@@ -1,0 +1,40 @@
+---
+import Layout from '../../components/Layout.astro';
+---
+<Layout title="Fitxa de catàleg">
+  <section class="page-intro catalogue-detail" data-detail aria-live="polite">
+    <p class="eyebrow">CATÀLEG</p>
+    <h1 data-title>Carregant la <em>fitxa.</em></h1>
+    <p class="lead" data-description></p>
+    <p class="form-message" data-detail-message role="status"></p>
+    <noscript><p class="config-notice">Aquesta fitxa necessita JavaScript per consultar el catàleg en temps real. Torna al <a href={`${import.meta.env.BASE_URL}cataleg/`}>catàleg</a> per veure la mostra disponible.</p></noscript>
+    <div data-detail-photos class="detail-photos"></div>
+    <dl data-detail-meta class="detail-meta"></dl>
+    <p><a class="text-link" href={`${import.meta.env.BASE_URL}cataleg/`}>Tornar al catàleg</a></p>
+  </section>
+</Layout>
+<script>
+  import { supabase } from '../../lib/supabase';
+  const title = document.querySelector<HTMLElement>('[data-title]')!;
+  const description = document.querySelector<HTMLElement>('[data-description]')!;
+  const message = document.querySelector<HTMLElement>('[data-detail-message]')!;
+  const photos = document.querySelector<HTMLElement>('[data-detail-photos]')!;
+  const meta = document.querySelector<HTMLElement>('[data-detail-meta]')!;
+  const id = new URLSearchParams(window.location.search).get('id');
+  const addMeta = (label: string, value: string | null | undefined, href?: string | null) => { if (!value) return; const group = document.createElement('div'); const term = document.createElement('dt'); const detail = document.createElement('dd'); term.textContent = label; if (href?.startsWith('https://')) { const link = document.createElement('a'); link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = `Obrir ${label.toLowerCase()} (s'obri en una pestanya nova)`; detail.append(link); } else detail.textContent = value; group.append(term, detail); meta.append(group); };
+  if (!supabase || !id) { title.textContent = 'Fitxa no disponible.'; message.textContent = 'Tria una peça des del catàleg per consultar-ne el detall.'; }
+  else {
+    const { data: piece, error } = await supabase.from('catalog_objects').select('id, inventory_code, title, description, manufacturer, model, serial_number, production_year_start, production_year_end, period_label, ownership, physical_condition, condition_notes, information_url, video_url, object_types(name), cabinets(code, room, shelf)').eq('id', id).eq('status', 'published').single();
+    if (error || !piece) { title.textContent = 'Fitxa no trobada.'; message.textContent = 'Aquesta peça no existeix o encara no és pública.'; }
+    else {
+      title.textContent = piece.title; description.textContent = piece.description || 'Fitxa documental del Museu d’Informàtica.';
+      const objectType = piece.object_types as unknown as { name: string } | null;
+      const cabinet = piece.cabinets as unknown as { code: string; room: string; shelf: string | null } | null;
+      addMeta('Codi d’inventari', piece.inventory_code); addMeta('Tipologia', objectType?.name); addMeta('Fabricant', piece.manufacturer); addMeta('Model', piece.model); addMeta('Número de sèrie', piece.serial_number);
+      const years = [piece.production_year_start, piece.production_year_end].filter(Boolean).join('–'); addMeta('Datació', years || piece.period_label); addMeta('Propietat', piece.ownership); addMeta('Estat de conservació', piece.physical_condition); addMeta('Notes de conservació', piece.condition_notes); addMeta('Ubicació', cabinet ? `${cabinet.code} · ${cabinet.room}${cabinet.shelf ? ` · ${cabinet.shelf}` : ''}` : null);
+      if (piece.information_url) addMeta('Documentació', piece.information_url, piece.information_url); if (piece.video_url) addMeta('Vídeo', piece.video_url, piece.video_url);
+      const { data: photoRows } = await supabase.from('object_photos').select('storage_path, alt_text, caption').eq('object_id', piece.id).order('position');
+      if (photoRows?.length) { const { data: signed } = await supabase.storage.from('catalog-photos').createSignedUrls(photoRows.map(photo => photo.storage_path), 3600); signed?.forEach((file, index) => { if (!file.signedUrl) return; const image = document.createElement('img'); image.src = file.signedUrl; image.alt = photoRows[index]?.alt_text || ''; image.width = 960; image.height = 640; image.loading = 'lazy'; photos.append(image); }); }
+    }
+  }
+</script>
