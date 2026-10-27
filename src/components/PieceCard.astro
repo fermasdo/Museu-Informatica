@@ -1,9 +1,26 @@
 ---
 import type { Piece } from '../data/pieces';
 const { piece } = Astro.props as { piece: Piece };
+const fallbackImageSource = `${import.meta.env.BASE_URL}${piece.image}`;
+const imageSource = piece.imagePublicUrl ?? fallbackImageSource;
+const imageOnError = piece.imagePublicUrl ? `this.onerror=null;this.src='${fallbackImageSource}';` : undefined;
 ---
 <article class="piece-card" data-piece data-decade={piece.decade} data-type={piece.type} data-location={piece.location}>
-  <img class="piece-image" src={`${import.meta.env.BASE_URL}${piece.image}`} alt={piece.imageAlt} width="640" height="420" loading="lazy" decoding="async" />
+  <img class="piece-image" src={imageSource} alt={piece.imageAlt} width="640" height="420" loading="lazy" decoding="async" onerror={imageOnError} />
   <div><p class="eyebrow">{piece.year} · {piece.type}</p><h3>{piece.name}</h3><p>{piece.note}</p></div>
+  {piece.isReferenceImage && piece.imageCreditUrl && piece.imageCreditText && (
+    <div class="piece-meta">
+      <span class="tag">Imatge de referència</span>
+      <a class="piece-image-credit" href={piece.imageCreditUrl} target="_blank" rel="noopener noreferrer" aria-describedby={`${piece.mark}-image-credit`}>
+        Crèdit de la imatge
+      </a>
+      <span id={`${piece.mark}-image-credit`} class="sr-only">{piece.imageCreditText}</span>
+      {piece.imageLicenseUrl && piece.imageLicenseText && (
+        <a class="piece-image-credit" href={piece.imageLicenseUrl} target="_blank" rel="noopener noreferrer" aria-label={`Llicència de la imatge: ${piece.imageLicenseText} (s’obri en una pestanya nova)`}>
+          Llicència
+        </a>
+      )}
+    </div>
+  )}
   <div class="piece-meta"><span class="tag">{piece.location}</span><span class="piece-index">{piece.mark} · {piece.owner}</span></div>
 </article>
