@@ -13,10 +13,11 @@ const isCurrent = (route: string) => path === route || (route === '/cataleg/' &&
     <a class="skip-link" href="#contingut">Vés al contingut principal</a>
     <header class="site-header">
       <a class="brand" href={import.meta.env.BASE_URL} aria-label="Museu d’Informàtica, inici"><svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 32V8h7l9 11 9-11h7v24h-7V18l-9 10-9-10v14z"/><path d="M9 5h22"/></svg><span>Museu<br /><b>d’Informàtica</b></span></a>
+      <nav class="desktop-navigation" aria-label="Navegació principal"><ul>{nav.map(([route, label]) => <li><a href={href(route)} aria-current={isCurrent(route) ? 'page' : undefined}>{label}</a></li>)}</ul></nav>
       <div class="header-controls">
         <details class="account-menu" data-account-menu>
           <summary data-account-summary><span class="account-avatar" data-account-avatar aria-hidden="true">?</span><span data-access-status>Accés</span></summary>
-          <div class="account-menu-panel"><p class="account-identity" data-account-identity hidden><b data-account-name></b><span data-account-role></span></p><a href={href('/col·labora/')} data-account-space hidden>El meu espai</a><a href={href('/col·labora/#perfil')} data-account-profile hidden>Edita el perfil</a><button type="button" data-account-signout hidden>Tanca sessió</button><a href={href('/col·labora/')} data-account-login>Inicia sessió</a><a href={href('/col·labora/')} data-account-signup>Crea un compte</a></div>
+          <div class="account-menu-panel"><p class="account-identity" data-account-identity hidden><b data-account-name></b><span data-account-role></span></p><a href={href('/col·labora/')} data-account-space hidden>El meu espai</a><a href={href('/col·labora/#perfil')} data-account-profile hidden>Edita el perfil</a><button type="button" data-account-signout hidden>Tanca sessió</button><a href={href('/col·labora/#inicia-sessio')} data-account-login>Inicia sessió</a><a href={href('/col·labora/#crea-compte')} data-account-signup>Crea un compte</a></div>
         </details>
         <details class="navigation-menu" data-mobile-menu>
           <summary aria-label="Obri el menú de navegació"><span class="menu-label">Menú</span><span class="menu-icon" aria-hidden="true"></span></summary>
@@ -37,6 +38,10 @@ const isCurrent = (route: string) => path === route || (route === '/cataleg/' &&
         const openMenu = [menu, accountMenu].find(item => item?.open);
         if (openMenu) { openMenu.open = false; openMenu.querySelector<HTMLElement>('summary')?.focus(); }
       });
+      document.querySelectorAll<HTMLAnchorElement>('[data-account-menu] a, [data-mobile-menu] a').forEach(link => link.addEventListener('click', () => {
+        accountMenu && (accountMenu.open = false);
+        menu && (menu.open = false);
+      }));
 
       const access = document.querySelector<HTMLElement>('[data-access-status]'); const avatar = document.querySelector<HTMLElement>('[data-account-avatar]'); const identity = document.querySelector<HTMLElement>('[data-account-identity]'); const name = document.querySelector<HTMLElement>('[data-account-name]'); const role = document.querySelector<HTMLElement>('[data-account-role]'); const spaceLink = document.querySelector<HTMLAnchorElement>('[data-account-space]'); const profileLink = document.querySelector<HTMLAnchorElement>('[data-account-profile]'); const signout = document.querySelector<HTMLButtonElement>('[data-account-signout]'); const login = document.querySelector<HTMLAnchorElement>('[data-account-login]'); const signup = document.querySelector<HTMLAnchorElement>('[data-account-signup]');
       const accountRole = (value: string) => ({ visitor: 'Visitant', student: 'Alumne/a', teacher: 'Professor/a' }[value] || value);

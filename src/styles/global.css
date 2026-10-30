@@ -65,3 +65,11 @@
   .account-menu-panel { position:absolute; z-index:6; top:calc(100% + .5rem); right:0; max-width:calc(100vw - 2.5rem); }
   .navigation-menu > .navigation-panel { z-index:5; }
 }
+
+/* La navegació d'escriptori no depén de l'estat d'un element <details>. */
+.desktop-navigation { display:none; }
+@media (min-width:701px) {
+  .desktop-navigation { display:block; flex:1 1 auto; min-width:0; }
+  .desktop-navigation ul { justify-content:flex-end; }
+  .navigation-menu { display:none; }
+}
