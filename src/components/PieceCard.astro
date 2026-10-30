@@ -1,26 +1,13 @@
 ---
 import type { Piece } from '../data/pieces';
 const { piece } = Astro.props as { piece: Piece };
-const fallbackImageSource = `${import.meta.env.BASE_URL}${piece.image}`;
-const imageSource = piece.imagePublicUrl ?? fallbackImageSource;
-const imageOnError = piece.imagePublicUrl ? `this.onerror=null;this.src='${fallbackImageSource}';` : undefined;
+const fallback = `${import.meta.env.BASE_URL}${piece.image}`;
+const source = piece.imagePublicUrl ?? fallback;
+const tags = [piece.type.toLowerCase(), piece.location.toLowerCase()];
 ---
-<article class="piece-card" data-piece data-decade={piece.decade} data-type={piece.type} data-location={piece.location}>
-  <img class="piece-image" src={imageSource} alt={piece.imageAlt} width="640" height="420" loading="lazy" decoding="async" onerror={imageOnError} />
-  <div><p class="eyebrow">{piece.year} · {piece.type}</p><h3>{piece.name}</h3><p>{piece.note}</p></div>
-  {piece.isReferenceImage && piece.imageCreditUrl && piece.imageCreditText && (
-    <div class="piece-meta">
-      <span class="tag">Imatge de referència</span>
-      <a class="piece-image-credit" href={piece.imageCreditUrl} target="_blank" rel="noopener noreferrer" aria-describedby={`${piece.mark}-image-credit`}>
-        Crèdit de la imatge
-      </a>
-      <span id={`${piece.mark}-image-credit`} class="sr-only">{piece.imageCreditText}</span>
-      {piece.imageLicenseUrl && piece.imageLicenseText && (
-        <a class="piece-image-credit" href={piece.imageLicenseUrl} target="_blank" rel="noopener noreferrer" aria-label={`Llicència de la imatge: ${piece.imageLicenseText} (s’obri en una pestanya nova)`}>
-          Llicència
-        </a>
-      )}
-    </div>
-  )}
-  <div class="piece-meta"><span class="tag">{piece.location}</span><span class="piece-index">{piece.mark} · {piece.owner}</span></div>
+<article class="piece-card" data-piece data-decade={piece.decade} data-type={piece.type} data-location={piece.location} data-tags={tags.join('|')} data-search-text={`${piece.name} ${piece.year} ${piece.type} ${piece.location} ${piece.note} ${piece.mark} ${piece.owner}`}>
+  <div class="piece-visual"><img class="piece-image" src={source} alt={piece.imageAlt} width="640" height="480" loading="lazy" decoding="async" onerror={`this.hidden=true;this.parentElement?.querySelector('[data-photo-fallback]')?.removeAttribute('hidden');`} /><p class="photo-fallback" data-photo-fallback hidden>Fotografia pendent</p></div>
+  {piece.isReferenceImage && piece.imageCreditUrl && piece.imageCreditText && <p class="piece-image-credit">Imatge de referència: <a href={piece.imageCreditUrl} target="_blank" rel="noopener noreferrer">{piece.imageCreditText} <span class="sr-only">(s’obri en una pestanya nova)</span><span aria-hidden="true">↗</span></a>{piece.imageLicenseUrl && piece.imageLicenseText && <> · <a href={piece.imageLicenseUrl} target="_blank" rel="noopener noreferrer">{piece.imageLicenseText} <span class="sr-only">(s’obri en una pestanya nova)</span><span aria-hidden="true">↗</span></a></>}</p>}
+  <div class="piece-content"><p class="eyebrow">{piece.year} · {piece.type}</p><h3><a data-detail-link href={`${import.meta.env.BASE_URL}cataleg/detall/?id=${encodeURIComponent(piece.mark)}`}>{piece.name}</a></h3><p>{piece.note}</p><div class="hashtag-list">{tags.slice(0, 2).map(tag => <span class="hashtag">#{tag}</span>)}</div></div>
+  <div class="piece-meta"><span class="tag">{piece.location}</span><a class="piece-cta" data-detail-link href={`${import.meta.env.BASE_URL}cataleg/detall/?id=${encodeURIComponent(piece.mark)}`}>Descobreix la peça <span aria-hidden="true">→</span></a></div>
 </article>

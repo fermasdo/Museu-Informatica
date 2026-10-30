@@ -1,0 +1,5 @@
+---
+import Layout from '../components/Layout.astro';
+const routes = [['15 minuts','Una mirada ràpida','Una selecció breu per observar com canvien les formes, les pantalles i les maneres d’usar la tecnologia.'],['30 minuts','De l’objecte a la persona','Atura’t en les preguntes: per a què servia, qui el feia servir i què ens diu ara.'],['45 minuts','Tecnologia en context','Relaciona peces, documents i usos per construir una cronologia pròpia de la informàtica quotidiana.'],['Per a docents','Una proposta oberta','Un punt de partida per preparar converses, activitats d’observació i recerca amb l’alumnat.']];
+---
+<Layout title="Recorreguts"><section class="page-intro"><p class="eyebrow">RECORREGUTS</p><h1>Quatre maneres de <em>mirar.</em></h1><p class="lead">Itineraris flexibles per acostar-se a la col·lecció al teu ritme.</p></section><section class="route-grid">{routes.map(([time,title,text], index) => <article><p class="eyebrow">{String(index + 1).padStart(2, '0')} · {time}</p><h2>{title}</h2><p>{text}</p></article>)}</section></Layout>
