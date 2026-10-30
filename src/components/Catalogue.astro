@@ -6,22 +6,24 @@ const shown = limit ? pieces.slice(0, limit) : pieces;
 ---
 <section class="catalogue" aria-labelledby="catalogue-title">
   <div class="section-heading"><p class="eyebrow">COL·LECCIÓ VIVA</p><h2 id="catalogue-title">{limit ? 'Una selecció per començar' : 'Explora les peces'}</h2></div>
-  {!limit && <div class="filters" aria-label="Filtra el catàleg"><label>Cerca <input type="search" placeholder="Nom, any o paraula…" data-search /></label><label>Dècada <select data-filter="decade"><option value="">Totes</option><option>1960</option><option>1980</option><option>1990</option><option>2000</option></select></label><label>Tipologia <select data-filter="type"><option value="">Totes</option><option>Ordinador</option><option>Consola</option><option>Perifèric</option><option>Documentació</option></select></label><label>Ubicació <select data-filter="location"><option value="">Totes</option><option>Corredor A</option><option>Corredor B</option><option>Biblioteca</option></select></label><button class="filter-reset" type="button" data-filter-reset>Netejar</button></div>}
+   {!limit && <div class="filters" aria-label="Filtra el catàleg"><label>Cerca <input type="search" placeholder="Nom, any o paraula…" data-search /></label><label>Dècada <select data-filter="decade"><option value="">Totes</option><option>1960</option><option>1980</option><option>1990</option><option>2000</option></select></label><label>Tipologia <select data-filter="type"><option value="">Totes</option><option>Ordinador</option><option>Consola</option><option>Perifèric</option><option>Documentació</option></select></label><label>Edifici <select data-filter="location"><option value="">Tots</option><option>Cicles</option><option>ESO</option><option>Administració</option></select></label><label>Etiqueta <select data-filter="tag"><option value="">Totes</option></select></label><button class="filter-reset" type="button" data-filter-reset>Netejar</button></div>}
   <p class="result-count" data-count aria-live="polite"></p>
   <div class="pieces-grid" data-pieces-grid data-limit={limit ?? ''}>{shown.map((piece) => <PieceCard {piece} />)}</div>
   {limit && <a class="text-link" href={`${import.meta.env.BASE_URL}cataleg/`}>Veure les {pieces.length} peces de mostra <span aria-hidden="true">→</span></a>}
 </section>
   <script>
     import { supabase } from '../lib/supabase';
-    type RemotePiece = { id: string; title: string; description: string | null; manufacturer: string | null; model: string | null; production_year_start: number | null; period_label: string | null; object_types: { name: string } | null; cabinets: { code: string; room: string } | null };
+      type RemoteTag = { id: string; name: string; normalized_name: string };
+       type RemotePiece = { id: string; title: string; description: string | null; manufacturer: string | null; model: string | null; production_year_start: number | null; period_label: string | null; object_types: { name: string } | null; cabinets: { code: string; building: string; cabinet: string } | null; object_tags: { tags: RemoteTag | null }[] | null };
     type RemotePhoto = { object_id: string; storage_path: string; alt_text: string };
     const grid = document.querySelector<HTMLElement>('[data-pieces-grid]');
     const makeCard = (piece: RemotePiece, photo?: RemotePhoto, imageUrl?: string) => {
       const card = document.createElement('article');
-      const year = piece.production_year_start ? String(piece.production_year_start) : (piece.period_label || 'Sense data');
+       const year = piece.production_year_start ? String(piece.production_year_start) : piece.period_label || 'Sense data';
       const type = piece.object_types?.name || 'Sense tipologia';
-      const location = piece.cabinets ? `${piece.cabinets.code} · ${piece.cabinets.room}` : 'Ubicació en revisió';
-      card.className = 'piece-card'; card.dataset.piece = ''; card.dataset.decade = piece.production_year_start ? `${Math.floor(piece.production_year_start / 10) * 10}` : ''; card.dataset.type = type; card.dataset.location = piece.cabinets?.room || location;
+       const location = piece.cabinets ? `${piece.cabinets.code} · ${piece.cabinets.building} · ${piece.cabinets.cabinet}` : 'Ubicació en revisió';
+        const tags = (piece.object_tags || []).map(row => row.tags).filter((tag): tag is RemoteTag => Boolean(tag));
+        card.className = 'piece-card'; card.dataset.piece = ''; card.dataset.decade = piece.production_year_start ? `${Math.floor(piece.production_year_start / 10) * 10}` : ''; card.dataset.type = type; card.dataset.location = piece.cabinets?.building || location; card.dataset.tag = tags.map(tag => tag.normalized_name).join(' ');
       const makeMark = () => {
         const mark = document.createElement('div');
         mark.className = 'piece-mark';
@@ -41,11 +43,11 @@ const shown = limit ? pieces.slice(0, limit) : pieces;
        const meta = document.createElement('div'); meta.className = 'piece-meta';
        const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = location;
        const index = document.createElement('span'); index.className = 'piece-index'; index.textContent = `REF. ${(piece.manufacturer || type).slice(0, 3).toUpperCase()}`;
-       meta.append(tag, index); details.append(eyebrow, heading, note); card.append(image || makeMark(), details, meta); return card;
+        const tagList = document.createElement('div'); tagList.className = 'hashtag-list'; tags.slice(0, 2).forEach(item => { const hashtag = document.createElement('span'); hashtag.className = 'hashtag'; hashtag.textContent = `#${item.normalized_name || item.name}`; tagList.append(hashtag); }); if (tags.length > 2) { const more = document.createElement('span'); more.className = 'hashtag'; more.textContent = `+${tags.length - 2}`; more.setAttribute('aria-label', `${tags.length - 2} etiquetes més`); tagList.append(more); } meta.append(tag, index); details.append(eyebrow, heading, note, tagList); card.append(image || makeMark(), details, meta); return card;
     };
     if (supabase && grid) {
       const limit = Number(grid.dataset.limit) || undefined;
-      let query = supabase.from('catalog_objects').select('id, title, description, manufacturer, model, production_year_start, period_label, object_types(name), cabinets(code, room)').eq('status', 'published').order('published_at', { ascending: false });
+        let query = supabase.from('catalog_objects').select('id, title, description, manufacturer, model, production_year_start, period_label, object_types(name), cabinets(code, building, cabinet), object_tags(tags(id, name, normalized_name))').eq('status', 'published').order('published_at', { ascending: false });
       if (limit) query = query.limit(limit);
       const { data, error } = await query;
       if (!error && data?.length) {
@@ -74,7 +76,7 @@ const shown = limit ? pieces.slice(0, limit) : pieces;
       }
     }
     function populateFilters(data: RemotePiece[]) {
-      const values = { type: new Set(data.map(p => p.object_types?.name).filter(Boolean)), location: new Set(data.map(p => p.cabinets?.room).filter(Boolean)) };
+       const values = { type: new Set(data.map(p => p.object_types?.name).filter(Boolean)), location: new Set(data.map(p => p.cabinets?.building).filter(Boolean)), tag: new Set(data.flatMap(p => (p.object_tags || []).map(row => row.tags?.normalized_name).filter(Boolean))) };
       (Object.entries(values) as [string, Set<string>][]).forEach(([key, choices]) => {
         const select = document.querySelector<HTMLSelectElement>(`[data-filter="${key}"]`); if (!select) return;
         [...choices].forEach(value => { if (![...select.options].some(option => option.value === value)) { const option = new Option(value, value); select.add(option); } });
