@@ -2,7 +2,7 @@
 import '../styles/global.css';
 const { title = 'Museu d’Informàtica', description = 'Museu d’Informàtica de l’IES l’Estació, Ontinyent.' } = Astro.props;
 const path = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '') || '/';
-const nav = [['/', 'Inici'], ['/cataleg/', 'Catàleg'], ['/visita/', 'Visita'], ['/recorreguts/', 'Recorreguts'], ['/laboratori/', 'Laboratori']];
+const nav = [['/', 'Inici'], ['/cataleg/', 'Catàleg'], ['/visita/', 'Visita'], ['/recorreguts/', 'Recorreguts'], ['/laboratori/', 'Laboratori'], ['/col·labora/', 'Col·labora']];
 const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
 const isCurrent = (route: string) => path === route || (route === '/cataleg/' && path.startsWith('/cataleg/'));
 ---
@@ -13,25 +13,30 @@ const isCurrent = (route: string) => path === route || (route === '/cataleg/' &&
     <a class="skip-link" href="#contingut">Vés al contingut principal</a>
     <header class="site-header">
       <a class="brand" href={import.meta.env.BASE_URL} aria-label="Museu d’Informàtica, inici"><svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 32V8h7l9 11 9-11h7v24h-7V18l-9 10-9-10v14z"/><path d="M9 5h22"/></svg><span>Museu<br /><b>d’Informàtica</b></span></a>
-      <details class="navigation-menu" data-menu>
-        <summary aria-label="Obri el menú de navegació" aria-expanded="false"><span class="menu-label">Menú</span><span class="menu-icon" aria-hidden="true"></span></summary>
-        <div class="navigation-panel">
-          <nav aria-label="Navegació principal"><ul>{nav.map(([route, label]) => <li><a href={href(route)} aria-current={isCurrent(route) ? 'page' : undefined}>{label}</a></li>)}</ul></nav>
-          <details class="account-menu">
-            <summary data-account-summary><span class="account-avatar" data-account-avatar aria-hidden="true">?</span><span data-access-status>Accés</span></summary>
-            <div class="account-menu-panel"><p class="account-identity" data-account-identity hidden><b data-account-name></b><span data-account-role></span></p><a href={href('/col·labora/')} data-account-space>El meu espai</a><a href={href('/col·labora/#perfil')} data-account-profile hidden>Edita el perfil</a><button type="button" data-account-signout hidden>Tanca sessió</button><a href={href('/col·labora/')} data-account-login>Inicia sessió</a><a href={href('/col·labora/')} data-account-signup>Crea un compte</a></div>
-          </details>
-        </div>
-      </details>
+      <div class="header-controls">
+        <details class="account-menu" data-account-menu>
+          <summary data-account-summary><span class="account-avatar" data-account-avatar aria-hidden="true">?</span><span data-access-status>Accés</span></summary>
+          <div class="account-menu-panel"><p class="account-identity" data-account-identity hidden><b data-account-name></b><span data-account-role></span></p><a href={href('/col·labora/')} data-account-space hidden>El meu espai</a><a href={href('/col·labora/#perfil')} data-account-profile hidden>Edita el perfil</a><button type="button" data-account-signout hidden>Tanca sessió</button><a href={href('/col·labora/')} data-account-login>Inicia sessió</a><a href={href('/col·labora/')} data-account-signup>Crea un compte</a></div>
+        </details>
+        <details class="navigation-menu" data-mobile-menu>
+          <summary aria-label="Obri el menú de navegació"><span class="menu-label">Menú</span><span class="menu-icon" aria-hidden="true"></span></summary>
+          <div class="navigation-panel">
+            <nav aria-label="Navegació principal"><ul>{nav.map(([route, label]) => <li><a href={href(route)} aria-current={isCurrent(route) ? 'page' : undefined}>{label}</a></li>)}</ul></nav>
+          </div>
+        </details>
+      </div>
     </header>
     <main id="contingut"><slot /></main>
     <footer class="site-footer"><div><a class="brand" href={import.meta.env.BASE_URL}><svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 32V8h7l9 11 9-11h7v24h-7V18l-9 10-9-10v14z"/><path d="M9 5h22"/></svg><span>Museu d’Informàtica<br /><b>IES l’Estació</b></span></a><p>Memòria digital a l’IES l’Estació.<br />Ontinyent</p></div><div><a href="mailto:museu.informatica@iesestacio.com">museu.informatica@iesestacio.com</a><p>Projecte educatiu obert a la comunitat.</p></div></footer>
     <script>
       import { supabase } from '../lib/supabase';
-      const menu = document.querySelector<HTMLDetailsElement>('[data-menu]');
-      const menuSummary = menu?.querySelector('summary');
-      menu?.addEventListener('toggle', () => menuSummary?.setAttribute('aria-expanded', String(menu.open)));
-      document.addEventListener('keydown', event => { if (event.key === 'Escape' && menu?.open) { menu.open = false; menuSummary?.focus(); } });
+      const menu = document.querySelector<HTMLDetailsElement>('[data-mobile-menu]');
+      const accountMenu = document.querySelector<HTMLDetailsElement>('[data-account-menu]');
+      document.addEventListener('keydown', event => {
+        if (event.key !== 'Escape') return;
+        const openMenu = [menu, accountMenu].find(item => item?.open);
+        if (openMenu) { openMenu.open = false; openMenu.querySelector<HTMLElement>('summary')?.focus(); }
+      });
 
       const access = document.querySelector<HTMLElement>('[data-access-status]'); const avatar = document.querySelector<HTMLElement>('[data-account-avatar]'); const identity = document.querySelector<HTMLElement>('[data-account-identity]'); const name = document.querySelector<HTMLElement>('[data-account-name]'); const role = document.querySelector<HTMLElement>('[data-account-role]'); const spaceLink = document.querySelector<HTMLAnchorElement>('[data-account-space]'); const profileLink = document.querySelector<HTMLAnchorElement>('[data-account-profile]'); const signout = document.querySelector<HTMLButtonElement>('[data-account-signout]'); const login = document.querySelector<HTMLAnchorElement>('[data-account-login]'); const signup = document.querySelector<HTMLAnchorElement>('[data-account-signup]');
       const accountRole = (value: string) => ({ visitor: 'Visitant', student: 'Alumne/a', teacher: 'Professor/a' }[value] || value);
@@ -44,6 +49,7 @@ const isCurrent = (route: string) => path === route || (route === '/cataleg/' &&
         if (profile?.avatar_path) { const { data } = await supabase.storage.from('profile-avatars').createSignedUrl(profile.avatar_path, 3600); if (data?.signedUrl) { const image = document.createElement('img'); image.src = data.signedUrl; image.alt = ''; image.width = image.height = 32; image.addEventListener('load', () => avatar.replaceChildren(image), { once: true }); } }
         identity.hidden = spaceLink.hidden = profileLink.hidden = signout.hidden = false; login.hidden = signup.hidden = true;
       }
+      renderAccount(null);
       if (supabase) { supabase.auth.getSession().then(({ data }) => renderAccount(data.session)); supabase.auth.onAuthStateChange((_event, session) => renderAccount(session)); signout?.addEventListener('click', () => supabase!.auth.signOut()); }
     </script>
   </body>
