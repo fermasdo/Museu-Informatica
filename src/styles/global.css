@@ -45,6 +45,13 @@
 .account-menu:not([open]) > .account-menu-panel,
 .navigation-menu:not([open]) > .navigation-panel { display:none; }
 .account-menu-panel a,.account-menu-panel button { min-height:44px; }
+.account-menu-panel { width:min(22rem,calc(100vw - 2.5rem)); }
+.account-menu-panel form { display:grid; gap:.65rem; padding:.65rem; }
+.account-menu-panel h2 { margin:0; font-size:1.25rem; letter-spacing:-.03em; }
+.account-menu-panel label,.account-menu-panel legend { font:500 .72rem 'DM Mono',monospace; }
+.account-menu-panel input { display:block; width:100%; min-height:42px; margin-top:.25rem; padding:.55rem; border:1px solid #59635b; background:var(--paper); color:var(--ink); font:inherit; }
+.account-menu-panel fieldset { margin:0; border:1px solid #59635b; }.account-menu-panel fieldset label { display:flex; gap:.45rem; align-items:center; margin:.4rem; }.account-menu-panel fieldset input { width:1rem; min-height:auto; margin:0; }
+.account-submit,.account-text-button { min-height:44px; border:1px solid var(--phosphor); cursor:pointer; font:600 .8rem Outfit,sans-serif; }.account-submit { background:var(--phosphor); color:var(--ink); }.account-text-button { padding:0; border:0; background:transparent; color:var(--paper); text-align:left; text-decoration:underline; text-underline-offset:3px; }.account-message { min-height:1.5rem; margin:.25rem .65rem .5rem; color:var(--phosphor); font-size:.78rem; }.account-message.is-error { color:#ffb8a6; }.account-menu-panel [data-account-signed-in] { display:grid; }
 
 @media (min-width:701px) {
   .navigation-menu { order:-1; }

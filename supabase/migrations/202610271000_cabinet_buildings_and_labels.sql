@@ -10,6 +10,7 @@ alter table public.cabinets
 update public.cabinets
 set building = case btrim(building)
   when 'Edifici Cicles' then 'Cicles'
+  when 'Edicifi Cicles' then 'Cicles'
   when 'Cicles' then 'Cicles'
   when 'Edifici ESO' then 'ESO'
   when 'ESO' then 'ESO'
