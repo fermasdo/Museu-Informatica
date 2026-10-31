@@ -73,6 +73,9 @@
   .navigation-menu > .navigation-panel { z-index:5; }
 }
 
+/* Selector d'etiquetes del catàleg. */
+.tag-selector { min-width:0; position:relative; display:grid; gap:.35rem; }.tag-selector > label { color:var(--muted); font:500 .68rem 'DM Mono',monospace; }.tag-selector > p { margin:0; color:var(--muted); font-size:.76rem; line-height:1.35; }.tag-combobox { position:relative; }.tag-combobox input { min-height:44px; }.tag-suggestions { position:absolute; z-index:3; top:calc(100% + .25rem); right:0; left:0; max-height:16rem; overflow:auto; margin:0; padding:.25rem; border:1px solid var(--ink); background:var(--paper); box-shadow:4px 4px 0 var(--cga-cyan); list-style:none; }.tag-suggestions [role="option"] { display:flex; align-items:center; min-height:44px; padding:.45rem .6rem; cursor:pointer; font:500 .78rem 'DM Mono',monospace; }.tag-suggestions [role="option"]:hover,.tag-suggestions [role="option"][aria-selected="true"] { background:var(--ink); color:var(--phosphor); }.selected-tags { display:flex; flex-wrap:wrap; gap:.35rem; }.selected-tag { display:inline-flex; align-items:center; gap:.3rem; padding:.18rem .25rem .18rem .45rem; background:var(--ink); color:var(--paper); font:500 .67rem 'DM Mono',monospace; }.selected-tag button { display:grid; width:1.5rem; min-height:1.5rem; place-items:center; padding:0; border:0; background:transparent; color:var(--paper); font:1.1rem/1 sans-serif; cursor:pointer; }.selected-tag button:hover { background:var(--phosphor); color:var(--ink); }.clear-tags { justify-self:start; min-height:32px; padding:0; border:0; background:transparent; color:var(--ink); font:500 .7rem 'DM Mono',monospace; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+
 /* La navegació d'escriptori no depén de l'estat d'un element <details>. */
 .desktop-navigation { display:none; }
 @media (min-width:701px) {
