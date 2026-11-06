@@ -1,0 +1,52 @@
+---
+import '../styles/global.css';
+const { title = 'El meu espai', current = 'space' } = Astro.props;
+const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
+---
+<!doctype html>
+<html lang="ca">
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width" /><title>{title} · Museu d’Informàtica</title></head>
+  <body class="private-body">
+    <a class="skip-link" href="#contingut-privat">Vés al contingut principal</a>
+    <header class="private-header">
+      <a class="brand" href={import.meta.env.BASE_URL} aria-label="Museu d’Informàtica, inici"><svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 32V8h7l9 11 9-11h7v24h-7V18l-9 10-9-10v14z"/><path d="M9 5h22"/></svg><span>Museu<br /><b>d’Informàtica</b></span></a>
+      <a class="return-link" href={import.meta.env.BASE_URL}>← Tornar al museu</a>
+      <details class="account-menu" data-private-account><summary><span class="account-avatar" data-private-avatar aria-hidden="true">?</span><span data-private-name>Compte</span></summary><div class="account-menu-panel"><a href={href('/espai/')}>El meu espai</a><a href={href('/perfil/')}>Edita el perfil</a><a href={href('/gestio-cataleg/')} data-private-management hidden>Gestiona el catàleg</a><button type="button" data-private-signout>Tanca sessió</button></div></details>
+    </header>
+    <nav class="private-nav" aria-label="Navegació del compte"><a href={href('/espai/')} aria-current={current === 'space' ? 'page' : undefined}>Espai</a><a href={href('/perfil/')} aria-current={current === 'profile' ? 'page' : undefined}>Perfil</a><a href={href('/gestio-cataleg/')} data-private-management hidden aria-current={current === 'manage' ? 'page' : undefined}>Gestió del catàleg</a></nav>
+    <main id="contingut-privat" tabindex="-1"><slot /></main>
+    <p class="private-service-notice" data-private-service-notice hidden role="status"><span data-private-service-message></span> <a href={href('/col·labora/')}>Torna a l’accés</a></p>
+    <script>
+      import { supabase } from '../lib/supabase';
+      const base = import.meta.env.BASE_URL;
+      const initials = (value: string) => value.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase() || '?';
+       const notice = (text: string) => { const target = document.querySelector<HTMLElement>('[data-private-service-notice]'); const message = document.querySelector<HTMLElement>('[data-private-service-message]'); if (target && message) { message.textContent = text; target.hidden = false; } };
+       async function account() {
+         if (!supabase) { notice('El servei de compte no està disponible ara mateix.'); return; }
+         try {
+           const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+           if (sessionError) throw sessionError;
+           if (!session) { window.location.replace(`${base}col·labora/`); return; }
+           const [{ data: profile, error: profileError }, { data: administrator, error: administratorError }] = await Promise.all([
+             supabase.from('profiles').select('display_name, role, avatar_path').eq('id', session.user.id).maybeSingle(),
+             supabase.rpc('is_administrator')
+           ]);
+           if (profileError || administratorError) throw profileError || administratorError;
+           const name = profile?.display_name || session.user.email || 'Compte';
+           document.querySelector<HTMLElement>('[data-private-name]')!.textContent = name;
+           const avatar = document.querySelector<HTMLElement>('[data-private-avatar]')!;
+           avatar.replaceChildren(); avatar.textContent = initials(name);
+           if (profile?.avatar_path) {
+             const { data, error } = await supabase.storage.from('profile-avatars').createSignedUrl(profile.avatar_path, 3600);
+             if (!error && data?.signedUrl) { const image = new Image(40, 40); image.alt = ''; image.src = data.signedUrl; image.onload = () => avatar.replaceChildren(image); }
+           }
+           document.querySelectorAll<HTMLElement>('[data-private-management]').forEach(link => link.hidden = !(profile?.role === 'teacher' || administrator === true));
+         } catch {
+           notice('No s’ha pogut carregar el teu compte. Pots tornar a intentar l’accés.');
+         }
+       }
+      document.querySelector<HTMLButtonElement>('[data-private-signout]')?.addEventListener('click', async () => { await supabase?.auth.signOut(); window.location.assign(`${base}col·labora/`); });
+      account();
+    </script>
+  </body>
+</html>

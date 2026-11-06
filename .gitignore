@@ -2,6 +2,9 @@ node_modules/
 dist/
 .astro/
 .env
-.opencode/
+.opencode/node_modules/
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock
 supabase/.temp/
 .DS_Store
