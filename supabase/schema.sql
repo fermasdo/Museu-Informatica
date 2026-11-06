@@ -1,5 +1,5 @@
 -- Museu d'Informàtica IES l'Estació
--- Esquema inicial versionat: 1.2.0 (2026-10-28)
+-- Esquema inicial versionat: 1.2.1 (2026-10-28)
 -- Apliqueu-lo només a un projecte Supabase nou o mitjançant una migració inicial.
 
 create extension if not exists pgcrypto;
@@ -218,6 +218,11 @@ create table public.donation_contacts (
 create index catalog_objects_published_idx on public.catalog_objects (published_at desc)
   where status = 'published';
 create index catalog_objects_creator_idx on public.catalog_objects (created_by, updated_at desc);
+-- Paginació docent: tant el llistat complet com el filtrat per estat tenen un
+-- ordre estable. Calen dos índexs perquè `status` només és un filtre opcional.
+create index catalog_objects_updated_at_id_idx on public.catalog_objects (updated_at desc, id desc);
+create index catalog_objects_status_updated_at_id_idx
+  on public.catalog_objects (status, updated_at desc, id desc);
 create index object_photos_object_idx on public.object_photos (object_id, position);
 create index object_tags_tag_object_idx on public.object_tags (tag_id, object_id);
 create index change_proposals_submitter_idx on public.change_proposals (submitted_by, status, created_at desc);

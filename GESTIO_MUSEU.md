@@ -15,7 +15,8 @@ Document viu per prioritzar, anotar i fer seguiment de la gestio del Museu d'Inf
 ### Administracio del cataleg
 
 - [x] Crear un panell inicial amb comptadors de fitxes pendents, donacions, usuaris pendents i contingut arxivat.
-- [ ] Afegir cerca, filtres persistents i paginacio a la gestio de fitxes.
+- [-] Afegir cerca, filtres persistents i paginacio a la gestio de fitxes.
+  - Implementat localment amb estat a l'URL i paginacio de 20 fitxes; pendent d'aplicar la migracio d'indexs i comprovar-ho al projecte remot.
 - [ ] Afegir historial d'accions: creacio, edicio, revisio, publicacio, arxiu i persona responsable.
 - [ ] Afegir comentaris de revisio estructurats amb motiu i tasques pendents.
 - [ ] Permetre accions en lot sobre fitxes: etiquetar, arxivar i publicar quan siga segur.

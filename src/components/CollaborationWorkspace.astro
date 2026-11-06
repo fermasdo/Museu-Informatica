@@ -27,17 +27,17 @@ const { mode = 'public' } = Astro.props;
         <section class="dashboard-summary" aria-labelledby="admin-summary-title">
           <div class="dashboard-summary-heading"><div><p class="eyebrow" data-teacher-summary-label>GESTIÓ</p><h3 id="admin-summary-title">Resum administratiu</h3></div><p>Accés ràpid a les tasques que requereixen atenció.</p></div>
           <div class="dashboard-summary-grid">
-            <a class="summary-card" href={`${import.meta.env.BASE_URL}gestio-cataleg/`}><span>Fitxes pendents</span><strong data-summary-count="pending_review">Carregant…</strong><small>Obri la gestió de fitxes pendents</small></a>
+            <a class="summary-card" href={`${import.meta.env.BASE_URL}gestio-cataleg/?status=pending_review`}><span>Fitxes pendents</span><strong data-summary-count="pending_review">Carregant…</strong><small>Obri la gestió de fitxes pendents</small></a>
             <a class="summary-card" href="#gestio-donacions" data-summary-donation-filter="open"><span>Donacions obertes</span><strong data-summary-count="donations">Carregant…</strong><small>Filtra les propostes noves i contactades</small></a>
             <a class="summary-card" href="#gestio-perfils" data-summary-profile-filter="pending"><span data-summary-users-label>Usuaris pendents</span><strong data-summary-count="profiles">Carregant…</strong><small>Filtra els perfils pendents d’aprovació</small></a>
-            <a class="summary-card" href={`${import.meta.env.BASE_URL}gestio-cataleg/`}><span>Fitxes arxivades</span><strong data-summary-count="archived">Carregant…</strong><small>Obri la gestió de fitxes arxivades</small></a>
+            <a class="summary-card" href={`${import.meta.env.BASE_URL}gestio-cataleg/?status=archived`}><span>Fitxes arxivades</span><strong data-summary-count="archived">Carregant…</strong><small>Obri la gestió de fitxes arxivades</small></a>
           </div>
           <p class="sr-only" data-summary-status role="status" aria-live="polite"></p>
         </section>
         <div id="gestio-perfils" class="dashboard-section" tabindex="-1"><p class="eyebrow">PERSONES COL·LABORADORES</p><h3>Perfils</h3><label>Filtra els perfils<select data-profile-filter><option value="">Tots els perfils</option><option value="pending">Pendents d’aprovació</option></select></label><div class="dashboard-list" data-teacher-profiles></div></div>
         <div class="dashboard-section" data-catalogue-management hidden><p class="eyebrow">NOVA FITXA</p><h3>Afig una peça al catàleg</h3><form class="data-form" data-teacher-object-form><div class="form-row"><label>Codi d’inventari <span class="sr-only">(opcional)</span><input name="inventory_code" pattern="[A-Z0-9][A-Z0-9_-]{2,39}" placeholder="Automàtic si el deixes buit" aria-describedby="inventory-help" /></label><label>Títol<input name="title" minlength="2" maxlength="180" required /></label></div><p id="inventory-help" class="form-note">Opcional: si no l’indiques, se n’assignarà un automàticament.</p><label>Descripció<textarea name="description" rows="4"></textarea></label><div class="form-row"><label>Fabricant<input name="manufacturer" maxlength="120" /></label><label>Model<input name="model" maxlength="120" /></label></div><div class="form-row"><label>Tipologia<select name="object_type_id" data-teacher-object-types required><option value="">Carregant…</option></select></label><label>Vitrina / armari<select name="cabinet_id" data-teacher-cabinets><option value="">Sense assignar</option></select></label></div><div class="form-row"><label>Any inicial<input name="production_year_start" type="number" min="1800" max="2200" /></label><label>Any final<input name="production_year_end" type="number" min="1800" max="2200" /></label></div><fieldset class="tag-choice" data-tag-picker><legend>Etiquetes</legend><p class="form-note">Selecciona hashtags existents per descriure la peça.</p><div data-tag-options></div></fieldset><label>Procedència<select name="ownership" data-provenance-select><option value="museum_property">Centre</option><option value="donation">Donació</option><option value="loan">Préstec</option></select></label><fieldset data-contact-fieldset hidden><legend>Persona vinculada</legend><label><span data-contact-label>Persona donant</span><input name="contact_name" data-contact-name maxlength="180" /></label><p class="form-note">Aquesta dada és privada i només s’utilitza per gestionar la procedència de la peça.</p><p class="form-note" data-contact-status role="status" aria-live="polite"></p></fieldset><button class="button" type="submit">Crear fitxa <span aria-hidden="true">→</span></button></form></div>
         <div class="dashboard-section" data-catalogue-management hidden><p class="eyebrow">TAXONOMIES I UBICACIONS</p><h3>Prepara el catàleg</h3><div class="catalogue-settings-grid"><div><h4>Tipologies</h4><form class="data-form" data-object-type-form><label>Nom<input name="name" minlength="2" maxlength="80" required /></label><label>Descripció <span class="sr-only">(opcional)</span><textarea name="description" rows="2" maxlength="500"></textarea></label><button class="small-button" type="submit">Afegir tipologia</button></form><div class="dashboard-list" data-object-types-list></div></div><div><h4>Etiquetes</h4><form class="data-form" data-tag-form><label>Etiqueta<input name="name" minlength="2" maxlength="60" required placeholder="Ex.: retroinformàtica" /></label><p class="form-note">Es normalitzarà i es mostrarà com a hashtag.</p><button class="small-button" type="submit">Afegir etiqueta</button></form><div class="dashboard-list" data-tags-list></div></div><div><h4>Ubicacions</h4><form class="data-form" data-cabinet-form><div class="form-row"><label>Codi<input name="code" pattern="[A-Za-z0-9_-]{1,30}" required /></label><label>Edifici<select name="building" required><option value="">Tria un edifici</option><option value="Cicles">Cicles</option><option value="ESO">ESO</option><option value="Administració">Administració</option></select></label></div><label>Armari<input name="cabinet" maxlength="80" required /></label><label>Prestatge <span class="sr-only">(opcional)</span><input name="shelf" maxlength="40" /></label><label>Notes <span class="sr-only">(opcional)</span><textarea name="notes" rows="2" maxlength="500"></textarea></label><button class="small-button" type="submit">Afegir ubicació</button></form><div class="dashboard-list" data-cabinets-list></div></div></div></div>
-        <div id="gestio-cataleg" class="dashboard-section" data-catalogue-management hidden tabindex="-1"><p class="eyebrow">GESTIÓ DEL CATÀLEG</p><h3>Revisa, edita i publica fitxes</h3><p class="form-note">Tota fitxa nova comença com a esborrany. Ací pots usar <b>Editar</b> per completar-la i <b>Publicar</b> quan estiga preparada.</p><label>Filtra per estat<select data-review-filter><option value="">Totes</option><option value="pending_review">Pendents de revisió</option><option value="draft">Esborranys</option><option value="published">Publicades</option><option value="archived">Arxivades</option></select></label><p class="form-note">Mostra esborranys, fitxes pendents de revisió, publicades i arxivades.</p><div class="dashboard-list" data-review-objects></div></div>
+        <div id="gestio-cataleg" class="dashboard-section" data-catalogue-management hidden tabindex="-1"><p class="eyebrow">GESTIÓ DEL CATÀLEG</p><h3>Revisa, edita i publica fitxes</h3><p class="form-note">Tota fitxa nova comença com a esborrany. Ací pots usar <b>Editar</b> per completar-la i <b>Publicar</b> quan estiga preparada.</p><form class="data-form" data-review-search><label>Cerca per títol, codi, fabricant o model<input name="q" type="search" autocomplete="off" /></label><div class="form-row"><label>Filtra per estat<select name="status" data-review-filter><option value="">Totes</option><option value="pending_review">Pendents de revisió</option><option value="draft">Esborranys</option><option value="published">Publicades</option><option value="archived">Arxivades</option></select></label><label>Filtra per tipologia<select name="type" data-review-type-filter><option value="">Totes les tipologies</option></select></label></div><div><button class="small-button" type="submit">Aplicar cerca i filtres</button><button class="link-button" type="reset">Restablir</button></div></form><p class="form-note" data-review-summary role="status" aria-live="polite"></p><div class="dashboard-list" data-review-objects></div><nav data-review-pagination aria-label="Paginació de fitxes" hidden></nav></div>
         <div class="dashboard-section"><p class="eyebrow">PROPOSTES</p><h3>Canvis rebuts</h3><div class="dashboard-list" data-proposals></div></div>
         <div id="gestio-donacions" class="dashboard-section" data-catalogue-management hidden tabindex="-1"><p class="eyebrow">DONACIONS</p><h3>Propostes de donació</h3><label>Filtra les donacions<select data-donation-filter><option value="">Totes les donacions</option><option value="open">Obertes: noves i contactades</option></select></label><div class="dashboard-list" data-donation-contacts></div></div>
         <div class="dashboard-section" data-catalogue-management hidden><p class="eyebrow">ANUNCIS PROPOSATS</p><h3>Revisa l’arxiu audiovisual</h3><div class="dashboard-list" data-video-proposals></div></div>
@@ -124,7 +124,35 @@ const { mode = 'public' } = Astro.props;
      const list = $('[data-own-objects]'); list.replaceChildren(); if (objects.data?.length) objects.data.forEach(row => { const item = document.createElement('article'); const details = document.createElement('div'); add(details, 'b', row.title); add(details, 'span', `${row.inventory_code} · ${human(row.status)}`); item.append(details); if (row.status === 'draft') { const controls = document.createElement('div'); const edit = add(controls, 'button', 'Editar', 'small-button') as HTMLButtonElement; edit.type = 'button'; edit.onclick = () => openStudentEditor(item, row, id); const submit = add(controls, 'button', 'Enviar a revisió', 'small-button') as HTMLButtonElement; submit.type = 'button'; submit.onclick = () => submitForReview(row.id, id); item.append(controls); const photoFragment = ($('[data-photo-manager-template]') as HTMLTemplateElement).content.cloneNode(true) as DocumentFragment; const photoForm = photoFragment.querySelector<HTMLFormElement>('[data-photo-form]')!; photoForm.addEventListener('submit', event => uploadStudentPhoto(event, row.id, (objectPhotos || []).filter(photo => photo.object_id === row.id), id)); item.append(photoFragment); } list.append(item); }); else add(list, 'p', 'Encara no has creat cap fitxa.');
       selectOptions('[data-object-types]', studentTypes, row => row.name || ''); selectOptions('[data-cabinets]', studentCabinets, row => `${row.code} · ${row.building} · ${row.cabinet}`, true); selectOptions('[data-published-objects]', published.data || [], row => `${row.title} (${row.inventory_code})`); renderStudentPhotoLists((objects.data || []).filter(row => row.status === 'draft'), objectPhotos || [], id); renderOwnProposals(proposals.data || []);
   }
-     let teacherTypes: CatalogueOption[] = [], teacherCabinets: CatalogueOption[] = [], studentTypes: CatalogueOption[] = [], studentCabinets: CatalogueOption[] = [], tags: Tag[] = [], profileRows: Profile[] = [], donationRows: any[] = [], activeTeacher = false, activeAdministrator = false;
+      let teacherTypes: CatalogueOption[] = [], teacherCabinets: CatalogueOption[] = [], studentTypes: CatalogueOption[] = [], studentCabinets: CatalogueOption[] = [], tags: Tag[] = [], profileRows: Profile[] = [], donationRows: any[] = [], activeTeacher = false, activeAdministrator = false;
+       const reviewPageSize = 20;
+       const reviewStatuses = ['pending_review', 'draft', 'published', 'archived'];
+       let reviewRequest = 0;
+      type ReviewState = { q: string; status: string; type: string; page: number };
+      const reviewState = (): ReviewState => {
+        const params = new URLSearchParams(window.location.search);
+        const status = params.get('status') || '';
+        return { q: (params.get('q') || '').trim(), status: reviewStatuses.includes(status) ? status : '', type: params.get('type') || '', page: Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1) };
+      };
+      const setReviewUrl = (state: ReviewState, navigation: 'replace' | 'push' = 'replace') => {
+        const url = new URL(window.location.href);
+        url.search = '';
+        if (state.q) url.searchParams.set('q', state.q);
+        if (state.status) url.searchParams.set('status', state.status);
+        if (state.type) url.searchParams.set('type', state.type);
+        if (state.page > 1) url.searchParams.set('page', String(state.page));
+        window.history[`${navigation}State`]({}, '', url);
+      };
+      const syncReviewControls = (state: ReviewState) => {
+        const form = document.querySelector<HTMLFormElement>('[data-review-search]');
+        if (!form) return;
+        (form.elements.namedItem('q') as HTMLInputElement).value = state.q;
+        (form.elements.namedItem('status') as HTMLSelectElement).value = state.status;
+        const type = form.elements.namedItem('type') as HTMLSelectElement;
+        type.value = state.type;
+        if (type.value !== state.type) type.value = '';
+      };
+      const safeSearchTerm = (value: string) => value.replace(/[%,().*_]/g, ' ').trim();
     async function loadTags() { if (!supabase) return; const { data, error } = await supabase.from('tags').select('id, name, normalized_name').order('normalized_name'); if (!error) tags = (data || []) as Tag[]; }
      function renderTagPicker(target: HTMLElement, selected: string[] = []) { target.replaceChildren(); if (!tags.length) { add(target, 'p', 'Encara no hi ha etiquetes disponibles.'); return; } tags.forEach(tag => { const label = document.createElement('label'); const input = document.createElement('input'); input.type = 'checkbox'; input.name = 'tag_ids'; input.value = tag.id; input.checked = selected.includes(tag.id); label.append(input, document.createTextNode(`#${tag.normalized_name || tag.name}`)); target.append(label); }); }
      function renderTagPickers() { document.querySelectorAll<HTMLElement>('[data-tag-options]').forEach(target => renderTagPicker(target)); }
@@ -145,12 +173,11 @@ const { mode = 'public' } = Astro.props;
            : supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student').eq('approval_status', 'pending')),
          supabase.from('catalog_objects').select('*', { count: 'exact', head: true }).eq('status', 'archived')
        ]);
-       const [profiles, objects, proposals, types, cabinets, donations] = await Promise.all([
+        const [profiles, proposals, types, cabinets, donations] = await Promise.all([
         (isAdministrator
           ? supabase.from('profiles').select('id, display_name, role, requested_role, approval_status').order('created_at', { ascending: false })
           : supabase.from('profiles').select('id, display_name, role, requested_role, approval_status').eq('role', 'student').order('created_at', { ascending: false })),
-          canManageCatalogue ? supabase.from('catalog_objects').select('id, inventory_code, title, description, manufacturer, model, object_type_id, cabinet_id, production_year_start, production_year_end, ownership, information_url, video_url, status, updated_at, donors(display_name)').in('status', ['draft', 'pending_review', 'published', 'archived']).order('updated_at', { ascending: false }) : Promise.resolve({ data: [], error: null }),
-        supabase.from('change_proposals').select('id, subject, message, status, reviewer_note, catalog_objects(title)').order('created_at', { ascending: false }),
+         supabase.from('change_proposals').select('id, subject, message, status, reviewer_note, catalog_objects(title)').order('created_at', { ascending: false }),
         canManageCatalogue ? supabase.from('object_types').select('id, name, description').order('name') : Promise.resolve({ data: [], error: null }),
          canManageCatalogue ? supabase.from('cabinets').select('id, code, building, cabinet, shelf, notes').order('code') : Promise.resolve({ data: [], error: null }),
           canManageCatalogue ? supabase.from('donation_contacts').select('id, name, email, phone, message, status, created_at').order('created_at', { ascending: false }) : Promise.resolve({ data: [], error: null })
@@ -162,12 +189,51 @@ const { mode = 'public' } = Astro.props;
          });
          $('[data-summary-status]').textContent = 'Resum administratiu actualitzat.';
         teacherTypes = types.data || []; teacherCabinets = cabinets.data || []; await loadTags(); renderTagPickers();
-      const objectIds = (objects.data || []).map(row => row.id);
-       const photoResult = canManageCatalogue && objectIds.length ? await supabase.from('object_photos').select('id, object_id, storage_path, alt_text, caption, position, created_at').in('object_id', objectIds).order('position') : { data: [] as ObjectPhoto[] };
-       const videoResult = canManageCatalogue ? await supabase.from('video_proposals').select('id, title, era, category, video_url, status').order('created_at', { ascending: false }).limit(50) : { data: [] as any[] };
+        const videoResult = canManageCatalogue ? await supabase.from('video_proposals').select('id, title, era, category, video_url, status').order('created_at', { ascending: false }).limit(50) : { data: [] as any[] };
       if (canManageCatalogue) { selectOptions('[data-teacher-object-types], [data-object-types]', teacherTypes, row => row.name || ''); selectOptions('[data-teacher-cabinets], [data-cabinets]', teacherCabinets, row => `${row.code} · ${row.building} · ${row.cabinet}`, true); }
-          profileRows = (profiles.data || []) as Profile[]; renderProfiles(profileRows, isAdministrator); if (canManageCatalogue) { renderCatalogueSettings(teacherTypes, teacherCabinets); renderReviewObjects(objects.data || [], photoResult.data || []); renderVideoProposals(videoResult.data || []); if (donations.error) { const target = $('[data-donation-contacts]'); target.replaceChildren(); add(target, 'p', 'No s’han pogut carregar les propostes de donació. Torna-ho a provar més tard.'); } else { donationRows = donations.data || []; renderDonationContacts(donationRows); } } renderProposals(proposals.data || []);
-  }
+          profileRows = (profiles.data || []) as Profile[]; renderProfiles(profileRows, isAdministrator); if (canManageCatalogue) { renderCatalogueSettings(teacherTypes, teacherCabinets); document.querySelectorAll<HTMLSelectElement>('[data-review-type-filter]').forEach(select => { select.replaceChildren(new Option('Totes les tipologies', '')); teacherTypes.forEach(type => select.add(new Option(type.name || '', type.id))); }); syncReviewControls(reviewState()); await loadReviewObjects(); renderVideoProposals(videoResult.data || []); if (donations.error) { const target = $('[data-donation-contacts]'); target.replaceChildren(); add(target, 'p', 'No s’han pogut carregar les propostes de donació. Torna-ho a provar més tard.'); } else { donationRows = donations.data || []; renderDonationContacts(donationRows); } } renderProposals(proposals.data || []);
+   }
+     async function loadReviewObjects() {
+       if (!supabase || !activeTeacher) return;
+       const requestId = ++reviewRequest;
+       const requestedState = reviewState();
+      const state = { ...requestedState, type: teacherTypes.some(type => type.id === requestedState.type) ? requestedState.type : '' };
+      if (state.type !== requestedState.type) setReviewUrl(state);
+      syncReviewControls(state);
+      const first = (state.page - 1) * reviewPageSize;
+      let query = supabase.from('catalog_objects').select('id, inventory_code, title, description, manufacturer, model, object_type_id, cabinet_id, production_year_start, production_year_end, ownership, information_url, video_url, status, updated_at, donors(display_name)', { count: 'exact' }).in('status', reviewStatuses).order('updated_at', { ascending: false }).order('id', { ascending: false });
+      if (state.status) query = query.eq('status', state.status);
+      if (state.type) query = query.eq('object_type_id', state.type);
+      const term = safeSearchTerm(state.q);
+       if (term) { const pattern = `%${term}%`; query = query.or(`title.ilike.${pattern},inventory_code.ilike.${pattern},manufacturer.ilike.${pattern},model.ilike.${pattern}`); }
+       const result = await query.range(first, first + reviewPageSize - 1);
+       if (requestId !== reviewRequest) return;
+       const total = result.count || 0;
+      if (!result.error && !result.data?.length && total && state.page > 1) { setReviewUrl({ ...state, page: Math.min(state.page - 1, Math.ceil(total / reviewPageSize)) }); await loadReviewObjects(); return; }
+      const summary = $('[data-review-summary]');
+      if (result.error) { summary.textContent = 'No s’han pogut carregar les fitxes. Torna-ho a provar més tard.'; renderReviewObjects([], []); renderReviewPagination(0, state); return; }
+       const objectIds = result.data.map(row => row.id);
+       const photos = objectIds.length ? await supabase.from('object_photos').select('id, object_id, storage_path, alt_text, caption, position, created_at').in('object_id', objectIds).order('position') : { data: [] as ObjectPhoto[] };
+       if (requestId !== reviewRequest) return;
+       renderReviewObjects(result.data, photos.data || []);
+      const shownFrom = total ? first + 1 : 0, shownTo = Math.min(first + result.data.length, total);
+      summary.textContent = total ? `Mostrant les fitxes ${shownFrom}–${shownTo} de ${total}.` : 'No hi ha fitxes que coincidisquen amb la cerca i els filtres.';
+      renderReviewPagination(total, state);
+    }
+    function renderReviewPagination(total: number, state: ReviewState) {
+      const nav = $('[data-review-pagination]');
+      const pages = Math.ceil(total / reviewPageSize);
+      nav.replaceChildren(); nav.hidden = pages <= 1;
+      if (pages <= 1) return;
+      const previous = add(nav, 'button', 'Anterior', 'small-button') as HTMLButtonElement;
+      previous.type = 'button'; previous.disabled = state.page <= 1; previous.setAttribute('aria-label', 'Pàgina anterior de fitxes');
+      previous.onclick = () => changeReviewPage(state.page - 1);
+      add(nav, 'span', `Pàgina ${state.page} de ${pages}`);
+      const next = add(nav, 'button', 'Següent', 'small-button') as HTMLButtonElement;
+      next.type = 'button'; next.disabled = state.page >= pages; next.setAttribute('aria-label', 'Pàgina següent de fitxes');
+      next.onclick = () => changeReviewPage(state.page + 1);
+    }
+    function changeReviewPage(page: number) { const state = reviewState(); setReviewUrl({ ...state, page: Math.max(1, page) }, 'push'); void loadReviewObjects(); }
     function renderProfiles(rows: Profile[], isAdministrator: boolean) { const target = $('[data-teacher-profiles]'), filter = document.querySelector<HTMLSelectElement>('[data-profile-filter]')?.value, visibleRows = filter === 'pending' ? rows.filter(row => row.approval_status === 'pending') : rows; target.replaceChildren(); visibleRows.forEach(row => { const item = document.createElement('article'); add(item, 'b', row.display_name); add(item, 'span', `${row.requested_role ? `Sol·licitud: ${human(row.requested_role)} · ` : ''}${human(row.role)} · ${human(row.approval_status)}`); const controls = document.createElement('div'); const pendingStudent = row.role === 'student' && row.approval_status === 'pending'; const pendingTeacher = isAdministrator && row.role === 'visitor' && row.requested_role === 'teacher' && row.approval_status === 'pending'; if (pendingStudent || pendingTeacher) { const approve = add(controls, 'button', 'Aprovar', 'small-button') as HTMLButtonElement; approve.type = 'button'; approve.onclick = () => updateProfile(row.id, pendingTeacher ? { role: 'teacher', approval_status: 'approved' } : { role: 'student', approval_status: 'approved' }); const reject = add(controls, 'button', 'Rebutjar', 'small-button') as HTMLButtonElement; reject.type = 'button'; reject.onclick = () => updateProfile(row.id, pendingTeacher ? { role: 'visitor', approval_status: 'rejected' } : { role: 'student', approval_status: 'rejected' }); } item.append(controls); target.append(item); }); if (!visibleRows.length) add(target, 'p', filter === 'pending' ? 'No hi ha perfils pendents d’aprovació.' : isAdministrator ? 'No hi ha perfils.' : 'No hi ha perfils d’alumnat.'); }
     function renderCatalogueSettings(types: CatalogueOption[], cabinets: CatalogueOption[]) {
        const typeList = $('[data-object-types-list]'), cabinetList = $('[data-cabinets-list]'), tagList = $('[data-tags-list]'); typeList.replaceChildren(); cabinetList.replaceChildren(); tagList.replaceChildren();
@@ -255,11 +321,20 @@ const { mode = 'public' } = Astro.props;
   $('[data-reset]').addEventListener('submit', async event => { event.preventDefault(); if (!supabase) return; const form = event.currentTarget as HTMLFormElement; if (!form.reportValidity()) return; const email = String(new FormData(form).get('email')).trim(); const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}col·labora/` }); setMessage(error ? 'No s’ha pogut enviar l’enllaç ara mateix. Torna-ho a provar més tard.' : 'Si el compte existeix, rebràs un enllaç per restablir la contrasenya.', !!error); });
   $('[data-new-password]').addEventListener('submit', async event => { event.preventDefault(); if (!supabase) return; const password = String(new FormData(event.currentTarget as HTMLFormElement).get('password')); const { error } = await supabase.auth.updateUser({ password }); if (error) setMessage(error.message, true); else { setMessage('Contrasenya actualitzada. Ja pots iniciar sessió.'); (event.currentTarget as HTMLFormElement).hidden = true; $('[data-login]').hidden = false; $('[data-signup]').hidden = false; } });
    $('[data-signout]').addEventListener('click', async () => { if (!supabase) return; await supabase.auth.signOut(); dashboard.hidden = true; authArea.hidden = false; setMessage('Sessió tancada.'); });
-   document.querySelectorAll<HTMLInputElement>('input[name="status"][value="published"]').forEach(input => input.closest('label')?.remove());
-     const reviewFilter = document.querySelector<HTMLSelectElement>('[data-review-filter]');
-     const applyReviewFilter = () => document.querySelectorAll<HTMLElement>('[data-review-objects] article').forEach(item => { const status = reviewFilter?.value; item.hidden = !!status && !item.textContent?.includes(human(status)); });
-     reviewFilter?.addEventListener('change', applyReviewFilter);
-     document.querySelector<HTMLElement>('[data-review-objects]') && new MutationObserver(applyReviewFilter).observe($('[data-review-objects]'), { childList: true });
+    document.querySelectorAll<HTMLInputElement>('input[name="status"][value="published"]').forEach(input => input.closest('label')?.remove());
+      const reviewFilter = document.querySelector<HTMLSelectElement>('[data-review-filter]');
+      const reviewForm = document.querySelector<HTMLFormElement>('[data-review-search]');
+      const applyReviewCriteria = () => {
+        if (!reviewForm) return;
+        const data = new FormData(reviewForm);
+        setReviewUrl({ q: String(data.get('q') || '').trim(), status: String(data.get('status') || ''), type: String(data.get('type') || ''), page: 1 }, 'push');
+        void loadReviewObjects();
+      };
+      reviewForm?.addEventListener('submit', event => { event.preventDefault(); applyReviewCriteria(); });
+      reviewForm?.addEventListener('reset', () => { window.setTimeout(() => { setReviewUrl({ q: '', status: '', type: '', page: 1 }, 'push'); void loadReviewObjects(); }); });
+      reviewFilter?.addEventListener('change', applyReviewCriteria);
+      document.querySelector<HTMLSelectElement>('[data-review-type-filter]')?.addEventListener('change', applyReviewCriteria);
+      window.addEventListener('popstate', () => { if (activeTeacher) void loadReviewObjects(); });
      const profileFilter = document.querySelector<HTMLSelectElement>('[data-profile-filter]');
      const donationFilter = document.querySelector<HTMLSelectElement>('[data-donation-filter]');
      profileFilter?.addEventListener('change', () => renderProfiles(profileRows, activeAdministrator));
@@ -278,8 +353,8 @@ const { mode = 'public' } = Astro.props;
        focusHashTarget();
        requestAnimationFrame(() => filter?.focus({ preventScroll: true }));
       }));
-     if (mode === 'space') document.querySelectorAll<HTMLAnchorElement>('.summary-card').forEach(card => {
-       card.href = `${import.meta.env.BASE_URL}gestio-cataleg/`;
+      if (mode === 'space') document.querySelectorAll<HTMLAnchorElement>('.summary-card').forEach(card => {
+        if (!card.dataset.summaryDonationFilter && !card.dataset.summaryProfileFilter) card.href = `${import.meta.env.BASE_URL}gestio-cataleg/${card.search}`;
        delete card.dataset.summaryFilter;
        delete card.dataset.summaryDonationFilter;
        delete card.dataset.summaryProfileFilter;
