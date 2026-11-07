@@ -127,6 +127,11 @@ create table public.catalog_object_history (
   action public.catalog_object_history_action not null,
   actor_id uuid references public.profiles(id) on delete set null,
   note text check (char_length(note) <= 2000),
+  review_reason text check (review_reason is null or review_reason in (
+    'incomplete_data', 'verify_information', 'missing_context', 'photo_feedback',
+    'classification_or_location', 'other'
+  )),
+  pending_tasks jsonb check (pending_tasks is null or jsonb_typeof(pending_tasks) = 'array'),
   created_at timestamptz not null default now()
 );
 
@@ -329,6 +334,8 @@ returns trigger language plpgsql security definer set search_path = pg_catalog, 
 declare
   history_action public.catalog_object_history_action;
   history_note text;
+  history_review_reason text;
+  history_pending_tasks jsonb;
 begin
   if tg_op = 'INSERT' then
     insert into public.catalog_object_history (object_id, action, actor_id)
@@ -343,8 +350,17 @@ begin
       when 'archived' then 'archived'::public.catalog_object_history_action
     end;
     history_note := nullif(current_setting('app.catalogue_history_note', true), '');
-    insert into public.catalog_object_history (object_id, action, actor_id, note)
-    values (new.id, history_action, auth.uid(), history_note);
+    if history_action = 'returned_to_draft' then
+      history_review_reason := nullif(current_setting('app.catalogue_history_review_reason', true), '');
+      history_pending_tasks := nullif(current_setting('app.catalogue_history_pending_tasks', true), '')::jsonb;
+    end if;
+    insert into public.catalog_object_history (
+      object_id, action, actor_id, note, review_reason, pending_tasks
+    )
+    values (
+      new.id, history_action, auth.uid(), history_note,
+      history_review_reason, history_pending_tasks
+    );
   elsif (to_jsonb(new) - array['updated_at', 'published_at', 'reviewed_by', 'reviewed_at', 'review_note'])
       is distinct from
         (to_jsonb(old) - array['updated_at', 'published_at', 'reviewed_by', 'reviewed_at', 'review_note']) then
@@ -846,15 +862,42 @@ $$;
 create or replace function public.review_catalog_object(
   object_uuid uuid,
   next_status public.catalog_status,
-  note text default null
+  note text default null,
+  p_review_reason text default null,
+  p_pending_tasks jsonb default null
 )
 returns public.catalog_objects language plpgsql security definer set search_path = pg_catalog, public as $$
 declare
   current_object public.catalog_objects;
   normalized_note text := nullif(trim(note), '');
+  normalized_reason text := nullif(trim(p_review_reason), '');
 begin
+  if normalized_note is not null and char_length(normalized_note) > 1000 then
+    raise exception 'El comentari no pot superar 1000 caràcters';
+  end if;
+  if next_status = 'draft' then
+    if normalized_reason is null or normalized_reason not in (
+      'incomplete_data', 'verify_information', 'missing_context', 'photo_feedback',
+      'classification_or_location', 'other'
+    ) then
+      raise exception 'Cal indicar un motiu de revisió vàlid';
+    end if;
+    if p_pending_tasks is null or jsonb_typeof(p_pending_tasks) <> 'array'
+       or jsonb_array_length(p_pending_tasks) not between 1 and 5
+       or exists (
+         select 1 from jsonb_array_elements(p_pending_tasks) as task(value)
+         where jsonb_typeof(task.value) <> 'string'
+            or char_length(btrim(task.value #>> '{}')) not between 1 and 180
+       ) then
+      raise exception 'Cal indicar entre 1 i 5 tasques de text no buit de fins a 180 caràcters';
+    end if;
+  elsif p_review_reason is not null or p_pending_tasks is not null then
+    raise exception 'El motiu i les tasques només es permeten en retornar a esborrany';
+  end if;
   perform set_config('app.catalogue_review', 'true', true);
   perform set_config('app.catalogue_history_note', coalesce(normalized_note, ''), true);
+  perform set_config('app.catalogue_history_review_reason', coalesce(normalized_reason, ''), true);
+  perform set_config('app.catalogue_history_pending_tasks', coalesce(p_pending_tasks::text, ''), true);
   select * into current_object from public.catalog_objects where id = object_uuid for update;
   if not found then raise exception 'Fitxa no trobada'; end if;
   if next_status = 'pending_review' then
@@ -871,9 +914,6 @@ begin
     end if;
   else
     raise exception 'Estat no permés';
-  end if;
-  if next_status = 'draft' and normalized_note is null then
-    raise exception 'Cal indicar un comentari en retornar una fitxa';
   end if;
   update public.catalog_objects
   set status = next_status,
@@ -896,6 +936,8 @@ returns table (
   id uuid,
   action public.catalog_object_history_action,
   note text,
+  review_reason text,
+  pending_tasks jsonb,
   created_at timestamptz,
   display_name text
 )
@@ -911,7 +953,7 @@ begin
     raise exception 'No tens permís per consultar l''historial d''aquesta fitxa';
   end if;
   return query
-  select h.id, h.action, h.note, h.created_at, p.display_name
+  select h.id, h.action, h.note, h.review_reason, h.pending_tasks, h.created_at, p.display_name
   from public.catalog_object_history h
   left join public.profiles p on p.id = h.actor_id
   where h.object_id = object_uuid
@@ -928,9 +970,9 @@ revoke all on function public.save_catalog_object_with_contact(uuid, jsonb, text
   from public, anon, authenticated;
 grant execute on function public.save_catalog_object_with_contact(uuid, jsonb, text)
   to authenticated;
-revoke all on function public.review_catalog_object(uuid, public.catalog_status, text)
+revoke all on function public.review_catalog_object(uuid, public.catalog_status, text, text, jsonb)
   from public, anon, authenticated;
-grant execute on function public.review_catalog_object(uuid, public.catalog_status, text) to authenticated;
+grant execute on function public.review_catalog_object(uuid, public.catalog_status, text, text, jsonb) to authenticated;
 revoke all on function public.get_catalog_object_history(uuid, integer, timestamptz, uuid)
   from public, anon, authenticated;
 grant execute on function public.get_catalog_object_history(uuid, integer, timestamptz, uuid) to authenticated;

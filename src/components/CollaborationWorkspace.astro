@@ -56,6 +56,21 @@ const { mode = 'public' } = Astro.props;
   <details class="object-editor photo-manager"><summary>Gestionar fotografies</summary><div class="photo-manager-content"><form class="data-form" data-photo-form><label>Fitxer (JPEG, PNG o WebP; màxim 10 MiB)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required /></label><label>Text alternatiu<input name="alt_text" minlength="4" maxlength="250" required /></label><label>Peu de foto <span class="sr-only">(opcional)</span><textarea name="caption" rows="2" maxlength="500"></textarea></label><button class="small-button" type="submit">Pujar fotografia</button></form><div class="photo-list" data-photo-list></div></div></details>
 </template>
 
+<template data-return-to-draft-template>
+  <section class="return-to-draft-panel" data-return-to-draft-panel aria-labelledby="return-to-draft-title">
+    <h4 id="return-to-draft-title">Retorna la fitxa amb indicacions</h4>
+    <p class="form-note">Indica què ha de revisar l’alumnat abans de tornar a enviar la fitxa.</p>
+    <form class="data-form" data-return-to-draft-form>
+      <label>Motiu principal<select name="review_reason" required><option value="">Tria un motiu</option><option value="incomplete_data">Informació incompleta</option><option value="verify_information">Cal verificar la informació</option><option value="missing_context">Falta context o fonts</option><option value="photo_feedback">Fotografies o text alternatiu per completar</option><option value="classification_or_location">Classificació o ubicació per revisar</option><option value="other">Un altre motiu</option></select></label>
+      <fieldset data-pending-tasks><legend>Tasques pendents</legend><p class="form-note">Afig entre una i cinc tasques concretes, de fins a 180 caràcters cadascuna.</p><div data-pending-task-list></div><button class="link-button" type="button" data-add-pending-task>Afegir una tasca</button></fieldset>
+      <label>Aclariment per a l’alumnat <span class="sr-only">(opcional)</span><textarea name="note" rows="3" maxlength="1000" aria-describedby="return-note-help"></textarea></label>
+      <p id="return-note-help" class="form-note">Opcional, màxim 1.000 caràcters.</p>
+      <p class="form-note" data-return-form-status role="alert" aria-live="assertive"></p>
+      <div><button class="small-button" type="submit">Retornar a esborrany</button><button class="link-button" type="button" data-cancel-return>Cancel·lar</button></div>
+    </form>
+  </section>
+</template>
+
 <script>
   import { supabase } from '../lib/supabase';
   const mode = document.querySelector<HTMLElement>('[data-workspace-mode]')?.dataset.workspaceMode || 'public';
@@ -112,16 +127,25 @@ const { mode = 'public' } = Astro.props;
   }
   async function loadStudent(id: string) {
     if (!supabase) return;
+      const studentClient = supabase;
       const [objects, types, cabinets, published, proposals] = await Promise.all([
-        supabase.from('catalog_objects').select('id, inventory_code, title, description, manufacturer, model, object_type_id, cabinet_id, production_year_start, production_year_end, ownership, information_url, video_url, status, updated_at').eq('created_by', id).order('updated_at', { ascending: false }),
+        supabase.from('catalog_objects').select('id, inventory_code, title, description, manufacturer, model, object_type_id, cabinet_id, production_year_start, production_year_end, ownership, information_url, video_url, status, review_note, updated_at').eq('created_by', id).order('updated_at', { ascending: false }),
       supabase.from('object_types').select('id, name').order('name'), supabase.from('cabinets').select('id, code, building, cabinet').order('code'),
        supabase.from('catalog_objects').select('id, title, inventory_code').eq('status', 'published').order('title'),
        supabase.from('change_proposals').select('subject, message, status, reviewer_note, catalog_objects(title)').eq('submitted_by', id).order('created_at', { ascending: false })
     ]);
       studentTypes = types.data || []; studentCabinets = cabinets.data || []; await loadTags(); renderTagPickers();
-     const objectIds = (objects.data || []).map(row => row.id);
+      const reviewFeedback = new Map<string, ObjectHistoryEntry>();
+      const returnedDrafts = (objects.data || []).filter(row => row.status === 'draft' && row.review_note);
+      if (returnedDrafts.length) await Promise.all(returnedDrafts.map(async row => {
+        const { data, error } = await studentClient.rpc('get_catalog_object_history', { object_uuid: row.id, page_limit: 10 });
+        if (error) return;
+        const latestReturn = ((data || []) as ObjectHistoryEntry[]).find(entry => entry.action === 'returned_to_draft');
+        if (latestReturn) reviewFeedback.set(row.id, latestReturn);
+      }));
+      const objectIds = (objects.data || []).map(row => row.id);
      const { data: objectPhotos } = objectIds.length ? await supabase.from('object_photos').select('id, object_id, storage_path, alt_text, caption, position, created_at').in('object_id', objectIds).order('position') : { data: [] as ObjectPhoto[] };
-     const list = $('[data-own-objects]'); list.replaceChildren(); if (objects.data?.length) objects.data.forEach(row => { const item = document.createElement('article'); const details = document.createElement('div'); add(details, 'b', row.title); add(details, 'span', `${row.inventory_code} · ${human(row.status)}`); item.append(details); if (row.status === 'draft') { const controls = document.createElement('div'); const edit = add(controls, 'button', 'Editar', 'small-button') as HTMLButtonElement; edit.type = 'button'; edit.onclick = () => openStudentEditor(item, row, id); const submit = add(controls, 'button', 'Enviar a revisió', 'small-button') as HTMLButtonElement; submit.type = 'button'; submit.onclick = () => submitForReview(row.id, id); item.append(controls); const photoFragment = ($('[data-photo-manager-template]') as HTMLTemplateElement).content.cloneNode(true) as DocumentFragment; const photoForm = photoFragment.querySelector<HTMLFormElement>('[data-photo-form]')!; photoForm.addEventListener('submit', event => uploadStudentPhoto(event, row.id, (objectPhotos || []).filter(photo => photo.object_id === row.id), id)); item.append(photoFragment); } list.append(item); }); else add(list, 'p', 'Encara no has creat cap fitxa.');
+      const list = $('[data-own-objects]'); list.replaceChildren(); if (objects.data?.length) objects.data.forEach(row => { const item = document.createElement('article'); const details = document.createElement('div'); add(details, 'b', row.title); add(details, 'span', `${row.inventory_code} · ${human(row.status)}`); item.append(details); if (row.status === 'draft' && row.review_note) { const feedback = document.createElement('section'); feedback.className = 'student-review-feedback'; feedback.setAttribute('aria-label', 'Feedback del professorat'); add(feedback, 'b', 'Feedback del professorat'); const returnedToDraft = reviewFeedback.get(row.id); if (returnedToDraft) { const review = reviewDetails(returnedToDraft); if (review.reason) add(feedback, 'p', `Motiu: ${reviewReasonLabel(review.reason)}`); if (review.tasks.length) { add(feedback, 'b', 'Tasques pendents'); const tasks = document.createElement('ol'); review.tasks.forEach(task => add(tasks, 'li', task)); feedback.append(tasks); } add(feedback, 'p', `Aclariment: ${review.note || row.review_note}`); } else add(feedback, 'p', row.review_note); item.append(feedback); } if (row.status === 'draft') { const controls = document.createElement('div'); const edit = add(controls, 'button', 'Editar', 'small-button') as HTMLButtonElement; edit.type = 'button'; edit.onclick = () => openStudentEditor(item, row, id); const submit = add(controls, 'button', 'Enviar a revisió', 'small-button') as HTMLButtonElement; submit.type = 'button'; submit.onclick = () => submitForReview(row.id, id); item.append(controls); const photoFragment = ($('[data-photo-manager-template]') as HTMLTemplateElement).content.cloneNode(true) as DocumentFragment; const photoForm = photoFragment.querySelector<HTMLFormElement>('[data-photo-form]')!; photoForm.addEventListener('submit', event => uploadStudentPhoto(event, row.id, (objectPhotos || []).filter(photo => photo.object_id === row.id), id)); item.append(photoFragment); } list.append(item); }); else add(list, 'p', 'Encara no has creat cap fitxa.');
       selectOptions('[data-object-types]', studentTypes, row => row.name || ''); selectOptions('[data-cabinets]', studentCabinets, row => `${row.code} · ${row.building} · ${row.cabinet}`, true); selectOptions('[data-published-objects]', published.data || [], row => `${row.title} (${row.inventory_code})`); renderStudentPhotoLists((objects.data || []).filter(row => row.status === 'draft'), objectPhotos || [], id); renderOwnProposals(proposals.data || []);
   }
       let teacherTypes: CatalogueOption[] = [], teacherCabinets: CatalogueOption[] = [], studentTypes: CatalogueOption[] = [], studentCabinets: CatalogueOption[] = [], tags: Tag[] = [], profileRows: Profile[] = [], donationRows: any[] = [], activeTeacher = false, activeAdministrator = false;
@@ -243,7 +267,7 @@ const { mode = 'public' } = Astro.props;
        tags.forEach(tag => { const item = document.createElement('article'); add(item, 'b', `#${tag.normalized_name || tag.name}`); tagList.append(item); });
         if (!types.length) add(typeList, 'p', 'Encara no hi ha tipologies.'); if (!tags.length) add(tagList, 'p', 'Encara no hi ha etiquetes.'); if (!cabinets.length) add(cabinetList, 'p', 'Encara no hi ha armaris.');
      }
-      type ObjectHistoryEntry = { id: string; action: string; note: string | null; created_at: string; display_name: string | null };
+      type ObjectHistoryEntry = { id: string; action: string; note: string | null; created_at: string; display_name: string | null; reason?: string | null; review_reason?: string | null; pending_tasks?: string[] | null };
       type ObjectHistoryState = { entries: ObjectHistoryEntry[]; beforeId: string | null; hasMore: boolean; loading: boolean };
      const objectHistory = new Map<string, ObjectHistoryState>();
      const reviewObjectIdentifiers = new Map<string, string>();
@@ -251,11 +275,19 @@ const { mode = 'public' } = Astro.props;
         created: 'Fitxa creada', edited: 'Fitxa editada', submitted_for_review: 'Fitxa enviada a revisió',
         returned_to_draft: 'Fitxa retornada a esborrany', published: 'Fitxa publicada', archived: 'Fitxa arxivada'
       }[action] || `Acció registrada: ${human(action).replace(/_/g, ' ')}`);
-     const historyDate = (value: string) => {
-       const date = new Date(value);
-       return Number.isNaN(date.valueOf()) ? 'Data desconeguda' : date.toLocaleString('ca-ES', { dateStyle: 'medium', timeStyle: 'short' });
-     };
-     function renderObjectHistory(target: HTMLElement, state: ObjectHistoryState) {
+      const historyDate = (value: string) => {
+        const date = new Date(value);
+        return Number.isNaN(date.valueOf()) ? 'Data desconeguda' : date.toLocaleString('ca-ES', { dateStyle: 'medium', timeStyle: 'short' });
+      };
+      const reviewReasonLabel = (reason: string) => ({ incomplete_data: 'Informació incompleta', verify_information: 'Cal verificar la informació', missing_context: 'Falta context o fonts', photo_feedback: 'Fotografies o text alternatiu per completar', classification_or_location: 'Classificació o ubicació per revisar', other: 'Un altre motiu' }[reason] || human(reason).replace(/_/g, ' '));
+      const reviewDetails = (entry: ObjectHistoryEntry) => {
+        let reason = entry.review_reason || entry.reason || null;
+        let tasks = Array.isArray(entry.pending_tasks) ? entry.pending_tasks : [];
+        let note = entry.note;
+        if (note?.trim().startsWith('{')) try { const parsed = JSON.parse(note); if (parsed && typeof parsed === 'object') { reason ||= typeof parsed.review_reason === 'string' ? parsed.review_reason : typeof parsed.reason === 'string' ? parsed.reason : null; tasks = tasks.length ? tasks : Array.isArray(parsed.pending_tasks) ? parsed.pending_tasks.filter((task: unknown): task is string => typeof task === 'string') : Array.isArray(parsed.tasks) ? parsed.tasks.filter((task: unknown): task is string => typeof task === 'string') : []; note = typeof parsed.note === 'string' ? parsed.note : typeof parsed.clarification === 'string' ? parsed.clarification : null; } } catch { /* La nota antiga és text lliure. */ }
+        return { reason, tasks, note };
+      };
+      function renderObjectHistory(target: HTMLElement, state: ObjectHistoryState) {
        const list = target.querySelector<HTMLOListElement>('[data-history-list]')!;
        const status = target.querySelector<HTMLElement>('[data-history-status]')!;
        const more = target.querySelector<HTMLButtonElement>('[data-history-more]')!;
@@ -264,7 +296,10 @@ const { mode = 'public' } = Astro.props;
          const item = document.createElement('li');
          add(item, 'b', historyActionLabel(entry.action));
          add(item, 'span', `${historyDate(entry.created_at)} · ${entry.display_name || 'Compte suprimit'}`);
-         if (entry.note) add(item, 'p', entry.note);
+          const details = reviewDetails(entry);
+          if (details.reason) add(item, 'p', `Motiu: ${reviewReasonLabel(details.reason)}`);
+          if (details.tasks.length) { const tasks = document.createElement('ul'); tasks.className = 'history-pending-tasks'; details.tasks.forEach(task => add(tasks, 'li', task)); item.append(tasks); }
+          if (details.note) add(item, 'p', details.note);
          list.append(item);
        });
        status.textContent = state.loading ? 'Carregant l’historial…' : state.entries.length ? '' : 'Encara no hi ha accions registrades.';
@@ -354,8 +389,40 @@ const { mode = 'public' } = Astro.props;
     async function renderProfileAvatar(path: string | null, displayName: string) { const target = $('[data-profile-avatar]'); target.replaceChildren(); target.textContent = avatarInitials(displayName); if (!supabase || !path) return; const { data } = await supabase.storage.from('profile-avatars').createSignedUrl(path, 3600); if (data?.signedUrl) { const image = document.createElement('img'); image.src = data.signedUrl; image.alt = ''; image.width = image.height = 80; image.onload = () => target.replaceChildren(image); } }
      const pendingObjectStatusUpdates = new Set<string>();
      let objectStatusInvoker: HTMLButtonElement | null = null;
-     $('[data-review-objects]').addEventListener('click', event => { const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button'); if (button && ['Publicar', 'Tornar a esborrany', 'Arxivar'].includes(button.textContent || '')) objectStatusInvoker = button; });
-     async function updateObjectStatus(id: string, status: 'draft' | 'published' | 'archived') { if (!supabase || pendingObjectStatusUpdates.has(id)) return; const note = status === 'draft' ? window.prompt('Explica què cal revisar abans de tornar-la a esborrany:') : null; if (status === 'draft' && !note?.trim()) return; if (status === 'archived' && !window.confirm('Vols arxivar aquesta fitxa? Deixarà de ser pública.')) return; const button = objectStatusInvoker || (document.activeElement instanceof HTMLButtonElement ? document.activeElement : null); const label = button?.textContent || ''; if (button) { button.disabled = true; button.textContent = status === 'published' ? 'Publicant…' : status === 'draft' ? 'Actualitzant…' : 'Arxivant…'; } pendingObjectStatusUpdates.add(id); try { const { error } = await supabase.rpc('review_catalog_object', { object_uuid: id, next_status: status, note }); setMessage(error ? 'No s’ha pogut actualitzar l’estat de la fitxa. Torna-ho a provar.' : `Fitxa ${status === 'published' ? 'publicada' : status === 'draft' ? 'tornada a esborrany' : 'arxivada'}.`, !!error); if (error) { if (button) { button.disabled = false; button.textContent = label; } return; } await refreshTeacherCatalogue(); } finally { pendingObjectStatusUpdates.delete(id); objectStatusInvoker = null; } }
+      $('[data-review-objects]').addEventListener('click', event => { const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button'); if (button && ['Publicar', 'Tornar a esborrany', 'Arxivar'].includes(button.textContent || '')) objectStatusInvoker = button; });
+      function openReturnToDraftPanel(id: string, invoker: HTMLButtonElement | null) {
+        const item = invoker?.closest<HTMLElement>('article');
+        if (!item) return;
+        item.querySelector<HTMLElement>('[data-return-to-draft-panel]')?.remove();
+        const fragment = ($('[data-return-to-draft-template]') as HTMLTemplateElement).content.cloneNode(true) as DocumentFragment;
+        const panel = fragment.querySelector<HTMLElement>('[data-return-to-draft-panel]')!;
+        const form = panel.querySelector<HTMLFormElement>('[data-return-to-draft-form]')!;
+        const taskList = panel.querySelector<HTMLElement>('[data-pending-task-list]')!;
+        const addTask = panel.querySelector<HTMLButtonElement>('[data-add-pending-task]')!;
+        const renderTaskControls = () => { const inputs = taskList.querySelectorAll<HTMLInputElement>('input[name="pending_tasks"]'); addTask.disabled = inputs.length >= 5; taskList.querySelectorAll<HTMLButtonElement>('[data-remove-pending-task]').forEach(button => button.disabled = inputs.length <= 1); };
+        const addTaskField = () => { if (taskList.querySelectorAll('input').length >= 5) return; const row = document.createElement('div'); row.className = 'pending-task-row'; const label = document.createElement('label'); label.textContent = 'Tasca pendent'; const input = document.createElement('input'); input.name = 'pending_tasks'; input.maxLength = 180; input.required = true; input.setAttribute('aria-label', 'Tasca pendent'); label.append(input); const remove = add(row, 'button', 'Eliminar tasca', 'link-button') as HTMLButtonElement; remove.type = 'button'; remove.dataset.removePendingTask = ''; remove.addEventListener('click', () => { row.remove(); renderTaskControls(); }); row.prepend(label); taskList.append(row); renderTaskControls(); };
+        addTask.addEventListener('click', () => { addTaskField(); const inputs = taskList.querySelectorAll<HTMLInputElement>('input[name="pending_tasks"]'); inputs[inputs.length - 1]?.focus(); });
+        addTaskField();
+        panel.querySelector<HTMLButtonElement>('[data-cancel-return]')!.addEventListener('click', () => { panel.remove(); invoker?.focus(); });
+        form.addEventListener('submit', event => void returnToDraft(event, id));
+        item.insertBefore(panel, item.querySelector('.object-editor'));
+        panel.querySelector<HTMLSelectElement>('[name="review_reason"]')?.focus();
+      }
+      async function returnToDraft(event: SubmitEvent, id: string) {
+        event.preventDefault();
+        if (!supabase || pendingObjectStatusUpdates.has(id)) return;
+        const form = event.currentTarget as HTMLFormElement;
+        const status = form.querySelector<HTMLElement>('[data-return-form-status]')!;
+        const data = new FormData(form);
+        const reason = String(data.get('review_reason') || '');
+        const tasks = data.getAll('pending_tasks').map(value => String(value).trim()).filter(Boolean);
+        const note = String(data.get('note') || '').trim();
+        if (!form.reportValidity() || !reason || tasks.length < 1 || tasks.length > 5 || tasks.some(task => task.length > 180) || note.length > 1000) { status.textContent = 'Revisa el motiu i les tasques pendents abans de continuar.'; return; }
+        const submit = form.querySelector<HTMLButtonElement>('[type="submit"]')!;
+        submit.disabled = true; submit.textContent = 'Retornant…'; pendingObjectStatusUpdates.add(id);
+        try { const { error } = await supabase.rpc('review_catalog_object', { object_uuid: id, next_status: 'draft', p_review_reason: reason, p_pending_tasks: tasks, note: note || null }); if (error) { status.textContent = 'No s’ha pogut retornar la fitxa. Torna-ho a provar.'; submit.disabled = false; submit.textContent = 'Retornar a esborrany'; setMessage(status.textContent, true); return; } setMessage('Fitxa tornada a esborrany amb indicacions.'); await refreshTeacherCatalogue(); } finally { pendingObjectStatusUpdates.delete(id); objectStatusInvoker = null; }
+      }
+      async function updateObjectStatus(id: string, status: 'draft' | 'published' | 'archived') { if (!supabase || pendingObjectStatusUpdates.has(id)) return; const button = document.activeElement instanceof HTMLButtonElement ? document.activeElement : objectStatusInvoker; if (status === 'draft') { openReturnToDraftPanel(id, button); return; } if (status === 'archived' && !window.confirm('Vols arxivar aquesta fitxa? Deixarà de ser pública.')) return; const label = button?.textContent || ''; if (button) { button.disabled = true; button.textContent = status === 'published' ? 'Publicant…' : 'Arxivant…'; } pendingObjectStatusUpdates.add(id); try { const { error } = await supabase.rpc('review_catalog_object', { object_uuid: id, next_status: status, note: null }); setMessage(error ? 'No s’ha pogut actualitzar l’estat de la fitxa. Torna-ho a provar.' : `Fitxa ${status === 'published' ? 'publicada' : 'arxivada'}.`, !!error); if (error) { if (button) { button.disabled = false; button.textContent = label; } return; } await refreshTeacherCatalogue(); } finally { pendingObjectStatusUpdates.delete(id); objectStatusInvoker = null; } }
     async function submitForReview(id: string, userId: string) { if (!supabase) return; const { error } = await supabase.rpc('review_catalog_object', { object_uuid: id, next_status: 'pending_review' }); setMessage(error ? error.message : 'Fitxa enviada a revisió.', !!error); if (!error) await loadStudent(userId); }
     async function reviewProposal(id: string, status: 'accepted' | 'implemented' | 'rejected') { if (!supabase) return; const note = status === 'rejected' ? window.prompt('Explica el motiu del rebuig:') : window.prompt('Resposta per a la persona que ha fet la proposta (opcional):'); if (status === 'rejected' && !note?.trim()) return; const { error } = await supabase.rpc('review_change_proposal', { proposal_uuid: id, next_status: status, note }); setMessage(error ? error.message : 'Proposta actualitzada.', !!error); if (!error) await refreshTeacherCatalogue(); }
     async function updateDonationStatus(id: string, status: 'contacted' | 'closed' | 'spam') { if (!supabase || !activeTeacher) return; const { data: { user } } = await supabase.auth.getUser(); if (!user) return; const { error } = await supabase.from('donation_contacts').update({ status, handled_by: user.id, handled_at: new Date().toISOString() }).eq('id', id); setMessage(error ? error.message : 'Proposta de donació actualitzada.', !!error); if (!error) await refreshTeacherCatalogue(); }
@@ -499,7 +566,16 @@ const { mode = 'public' } = Astro.props;
    .object-history { width:100%; }
    .object-history-content { padding-top:.75rem; }
    .object-history ol { display:grid; gap:.6rem; margin:.75rem 0; padding-left:1.4rem; }
-   .object-history li > * { display:block; }
-   .object-history li span,.object-history li p { color:var(--muted); font-size:.9rem; }
-   .object-history li p { margin:.2rem 0 0; }
- </style>
+    .object-history li > * { display:block; }
+    .object-history li span,.object-history li p { color:var(--muted); font-size:.9rem; }
+    .object-history li p { margin:.2rem 0 0; }
+    .history-pending-tasks { margin:.35rem 0 0; padding-left:1.25rem; color:var(--muted); font-size:.9rem; }
+    .return-to-draft-panel,.student-review-feedback { width:100%; padding:1rem; border:1px solid var(--line); background:#e4f3df; }
+    .return-to-draft-panel h4 { margin:0; }
+    .return-to-draft-panel .data-form { margin-top:1rem; }
+    .pending-task-row { display:flex; align-items:end; gap:.75rem; margin-top:.65rem; }
+    .pending-task-row label { flex:1; }
+    .student-review-feedback { margin-top:.75rem; background:var(--paper-deep); }
+    .student-review-feedback p { margin:.3rem 0 0; }
+    @media (max-width:520px) { .pending-task-row { align-items:stretch; flex-direction:column; gap:.35rem; } }
+  </style>

@@ -19,7 +19,8 @@ Document viu per prioritzar, anotar i fer seguiment de la gestio del Museu d'Inf
   - Implementat localment amb estat a l'URL i paginacio de 20 fitxes; pendent d'aplicar la migracio d'indexs i comprovar-ho al projecte remot.
 - [-] Afegir historial d'accions: creacio, edicio, revisio, publicacio, arxiu i persona responsable.
   - Implementat localment amb consulta sota demanda per fitxa; pendent d'aplicar la migracio i comprovar el flux al projecte remot.
-- [ ] Afegir comentaris de revisio estructurats amb motiu i tasques pendents.
+- [-] Afegir comentaris de revisio estructurats amb motiu i tasques pendents.
+  - Implementat localment amb motiu, tasques i aclariment; pendent d'aplicar la migracio i comprovar el flux docent-alumnat al projecte remot.
 - [ ] Permetre accions en lot sobre fitxes: etiquetar, arxivar i publicar quan siga segur.
 - [ ] Afegir una llista clara de fitxes pendents de revisio com a vista principal docent.
 
