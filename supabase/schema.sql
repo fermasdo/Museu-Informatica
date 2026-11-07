@@ -1,5 +1,5 @@
 -- Museu d'Informàtica IES l'Estació
--- Esquema inicial versionat: 1.2.1 (2026-10-28)
+-- Esquema inicial versionat: 1.2.2 (2026-10-28)
 -- Apliqueu-lo només a un projecte Supabase nou o mitjançant una migració inicial.
 
 create extension if not exists pgcrypto;
@@ -11,6 +11,9 @@ create type public.ownership_kind as enum ('donation', 'loan', 'museum_property'
 create type public.object_condition as enum ('excellent', 'good', 'fair', 'poor', 'unknown');
 create type public.proposal_status as enum ('open', 'accepted', 'rejected', 'implemented');
 create type public.activity_kind as enum ('gymkhana', 'cinema', 'library');
+create type public.catalog_object_history_action as enum (
+  'created', 'edited', 'submitted_for_review', 'returned_to_draft', 'published', 'archived'
+);
 
 -- requested_role és una petició validada, mai una concessió de privilegis.
 create table public.profiles (
@@ -115,6 +118,16 @@ create table public.catalog_objects (
   constraint catalog_object_publication_date check (
     status <> 'published' or published_at is not null
   )
+);
+
+-- Traça d'accions del catàleg: només l'ompli el trigger de catalog_objects.
+create table public.catalog_object_history (
+  id uuid primary key default gen_random_uuid(),
+  object_id uuid not null references public.catalog_objects(id) on delete cascade,
+  action public.catalog_object_history_action not null,
+  actor_id uuid references public.profiles(id) on delete set null,
+  note text check (char_length(note) <= 2000),
+  created_at timestamptz not null default now()
 );
 
 -- NOT VALID manté la instal·lació compatible amb dades heretades; tota fila nova
@@ -223,6 +236,8 @@ create index catalog_objects_creator_idx on public.catalog_objects (created_by, 
 create index catalog_objects_updated_at_id_idx on public.catalog_objects (updated_at desc, id desc);
 create index catalog_objects_status_updated_at_id_idx
   on public.catalog_objects (status, updated_at desc, id desc);
+create index catalog_object_history_object_created_at_idx
+  on public.catalog_object_history (object_id, created_at desc, id desc);
 create index object_photos_object_idx on public.object_photos (object_id, position);
 create index object_tags_tag_object_idx on public.object_tags (tag_id, object_id);
 create index change_proposals_submitter_idx on public.change_proposals (submitted_by, status, created_at desc);
@@ -309,6 +324,61 @@ begin
 end;
 $$;
 
+create or replace function public.record_catalog_object_history()
+returns trigger language plpgsql security definer set search_path = pg_catalog, public as $$
+declare
+  history_action public.catalog_object_history_action;
+  history_note text;
+begin
+  if tg_op = 'INSERT' then
+    insert into public.catalog_object_history (object_id, action, actor_id)
+    values (new.id, 'created', auth.uid());
+    return new;
+  end if;
+  if new.status is distinct from old.status then
+    history_action := case new.status
+      when 'pending_review' then 'submitted_for_review'::public.catalog_object_history_action
+      when 'draft' then 'returned_to_draft'::public.catalog_object_history_action
+      when 'published' then 'published'::public.catalog_object_history_action
+      when 'archived' then 'archived'::public.catalog_object_history_action
+    end;
+    history_note := nullif(current_setting('app.catalogue_history_note', true), '');
+    insert into public.catalog_object_history (object_id, action, actor_id, note)
+    values (new.id, history_action, auth.uid(), history_note);
+  elsif (to_jsonb(new) - array['updated_at', 'published_at', 'reviewed_by', 'reviewed_at', 'review_note'])
+      is distinct from
+        (to_jsonb(old) - array['updated_at', 'published_at', 'reviewed_by', 'reviewed_at', 'review_note']) then
+    insert into public.catalog_object_history (object_id, action, actor_id)
+    values (new.id, 'edited', auth.uid());
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.protect_catalogue_review_fields()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  if (new.status is distinct from old.status
+      or new.reviewed_by is distinct from old.reviewed_by
+      or new.reviewed_at is distinct from old.reviewed_at
+      or new.review_note is distinct from old.review_note)
+     and current_setting('app.catalogue_review', true) is distinct from 'true' then
+    raise exception 'Els estats i les dades de revisió només es poden modificar mitjançant el flux de revisió';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.protect_catalogue_initial_status()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  if new.status <> 'draft' then
+    raise exception 'Les fitxes noves s''han de crear com a esborrany';
+  end if;
+  return new;
+end;
+$$;
+
 -- Funcions SECURITY DEFINER petites per evitar recursió de RLS. No retornen dades.
 create or replace function public.is_administrator()
 returns boolean language sql stable security definer set search_path = public as $$
@@ -353,6 +423,12 @@ create trigger catalog_objects_updated_at before update on public.catalog_object
   for each row execute procedure public.set_updated_at();
 create trigger catalog_objects_publication before update on public.catalog_objects
   for each row execute procedure public.set_publication_timestamp();
+create trigger catalog_objects_protect_review_fields before update on public.catalog_objects
+  for each row execute procedure public.protect_catalogue_review_fields();
+create trigger catalog_objects_protect_initial_status before insert on public.catalog_objects
+  for each row execute procedure public.protect_catalogue_initial_status();
+create trigger catalog_objects_record_history after insert or update on public.catalog_objects
+  for each row execute procedure public.record_catalog_object_history();
 create trigger proposals_updated_at before update on public.change_proposals
   for each row execute procedure public.set_updated_at();
 create trigger activities_updated_at before update on public.activities
@@ -366,6 +442,7 @@ alter table public.object_types enable row level security;
 alter table public.cabinets enable row level security;
 alter table public.donors enable row level security;
 alter table public.catalog_objects enable row level security;
+alter table public.catalog_object_history enable row level security;
 alter table public.object_photos enable row level security;
 alter table public.tags enable row level security;
 alter table public.object_tags enable row level security;
@@ -417,6 +494,12 @@ create policy "catalog: students update own drafts" on public.catalog_objects fo
               and ownership in ('museum_property', 'unknown') and donor_id is null);
 create policy "catalog: students delete own drafts" on public.catalog_objects for delete to authenticated
   using (public.is_approved_student() and created_by = auth.uid() and status = 'draft');
+create policy "catalog history: managers and authors read" on public.catalog_object_history for select to authenticated
+  using (public.is_teacher() or (
+    public.is_approved_student() and exists (
+      select 1 from public.catalog_objects o where o.id = object_id and o.created_by = auth.uid()
+    )
+  ));
 
 create policy "photos: teachers manage" on public.object_photos for all to authenticated
   using (public.is_teacher()) with check (public.is_teacher());
@@ -504,11 +587,14 @@ grant select, insert, update, delete on all tables in schema public to authentic
 -- vistes amb columnes segures. `authenticated` manté l'accés sotmés a RLS per
 -- al professorat i a l'alumnat propietari dels seus esborranys.
 revoke select on public.catalog_objects, public.object_photos, public.tags, public.object_tags from anon;
+revoke all on public.catalog_object_history from anon, authenticated;
+grant select on public.catalog_object_history to authenticated;
 revoke all on function public.is_administrator() from public;
 grant execute on function public.is_administrator() to authenticated;
 grant execute on function public.is_teacher(), public.is_approved_student(), public.can_read_catalog_photo(text) to anon, authenticated;
 revoke all on function public.assign_inventory_code() from public;
 grant execute on function public.assign_inventory_code() to authenticated;
+revoke all on function public.record_catalog_object_history() from public, anon, authenticated;
 
 comment on table public.donation_contacts is 'Dades de contacte privades; l''alta pública no implica lectura pública.';
 comment on table public.object_photos is 'Metadades d''imatges emmagatzemades al bucket privat catalog-photos.';
@@ -756,10 +842,98 @@ begin
 end;
 $$;
 
+-- Única via per a les transicions d'estat: el trigger n'escriu la traça amb la nota.
+create or replace function public.review_catalog_object(
+  object_uuid uuid,
+  next_status public.catalog_status,
+  note text default null
+)
+returns public.catalog_objects language plpgsql security definer set search_path = pg_catalog, public as $$
+declare
+  current_object public.catalog_objects;
+  normalized_note text := nullif(trim(note), '');
+begin
+  perform set_config('app.catalogue_review', 'true', true);
+  perform set_config('app.catalogue_history_note', coalesce(normalized_note, ''), true);
+  select * into current_object from public.catalog_objects where id = object_uuid for update;
+  if not found then raise exception 'Fitxa no trobada'; end if;
+  if next_status = 'pending_review' then
+    if current_object.created_by <> auth.uid() or not public.is_approved_student() or current_object.status <> 'draft' then
+      raise exception 'No pots enviar aquesta fitxa a revisió';
+    end if;
+  elsif next_status in ('draft', 'published', 'archived') then
+    if not public.is_teacher() then raise exception 'No tens permís per revisar fitxes'; end if;
+    if next_status = 'draft' and current_object.status <> 'pending_review' then
+      raise exception 'Només es poden retornar fitxes pendents';
+    end if;
+    if next_status = 'published' and current_object.status not in ('draft', 'pending_review') then
+      raise exception 'Transició de publicació no permesa';
+    end if;
+  else
+    raise exception 'Estat no permés';
+  end if;
+  if next_status = 'draft' and normalized_note is null then
+    raise exception 'Cal indicar un comentari en retornar una fitxa';
+  end if;
+  update public.catalog_objects
+  set status = next_status,
+      reviewed_by = case when public.is_teacher() then auth.uid() else reviewed_by end,
+      reviewed_at = case when public.is_teacher() then now() else reviewed_at end,
+      review_note = case when public.is_teacher() then normalized_note else review_note end
+  where id = object_uuid
+  returning * into current_object;
+  return current_object;
+end;
+$$;
+
+create or replace function public.get_catalog_object_history(
+  object_uuid uuid,
+  page_limit integer default 10,
+  before_at timestamptz default null,
+  before_id uuid default null
+)
+returns table (
+  id uuid,
+  action public.catalog_object_history_action,
+  note text,
+  created_at timestamptz,
+  display_name text
+)
+language plpgsql security definer set search_path = pg_catalog, public as $$
+begin
+  if page_limit is null or page_limit not between 1 and 50 then
+    raise exception 'El límit ha d''estar entre 1 i 50';
+  end if;
+  if not public.is_teacher() and not exists (
+    select 1 from public.catalog_objects o
+    where o.id = object_uuid and o.created_by = auth.uid() and public.is_approved_student()
+  ) then
+    raise exception 'No tens permís per consultar l''historial d''aquesta fitxa';
+  end if;
+  return query
+  select h.id, h.action, h.note, h.created_at, p.display_name
+  from public.catalog_object_history h
+  left join public.profiles p on p.id = h.actor_id
+  where h.object_id = object_uuid
+    and (
+      before_at is null
+      or (h.created_at < before_at or (h.created_at = before_at and h.id < before_id))
+    )
+  order by h.created_at desc, h.id desc
+  limit page_limit;
+end;
+$$;
+
 revoke all on function public.save_catalog_object_with_contact(uuid, jsonb, text)
   from public, anon, authenticated;
 grant execute on function public.save_catalog_object_with_contact(uuid, jsonb, text)
   to authenticated;
+revoke all on function public.review_catalog_object(uuid, public.catalog_status, text)
+  from public, anon, authenticated;
+grant execute on function public.review_catalog_object(uuid, public.catalog_status, text) to authenticated;
+revoke all on function public.get_catalog_object_history(uuid, integer, timestamptz, uuid)
+  from public, anon, authenticated;
+grant execute on function public.get_catalog_object_history(uuid, integer, timestamptz, uuid) to authenticated;
 
 comment on view public.public_catalog_objects is
   'Catàleg públic: camps explícitament segurs de peces publicades, amb procedència no identificativa i sense metadades internes.';

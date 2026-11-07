@@ -215,7 +215,8 @@ const { mode = 'public' } = Astro.props;
        const objectIds = result.data.map(row => row.id);
        const photos = objectIds.length ? await supabase.from('object_photos').select('id, object_id, storage_path, alt_text, caption, position, created_at').in('object_id', objectIds).order('position') : { data: [] as ObjectPhoto[] };
        if (requestId !== reviewRequest) return;
-       renderReviewObjects(result.data, photos.data || []);
+        reviewObjectIdentifiers.clear(); result.data.forEach(row => reviewObjectIdentifiers.set(String(row.inventory_code), row.id));
+        renderReviewObjects(result.data, photos.data || []);
       const shownFrom = total ? first + 1 : 0, shownTo = Math.min(first + result.data.length, total);
       summary.textContent = total ? `Mostrant les fitxes ${shownFrom}–${shownTo} de ${total}.` : 'No hi ha fitxes que coincidisquen amb la cerca i els filtres.';
       renderReviewPagination(total, state);
@@ -240,8 +241,99 @@ const { mode = 'public' } = Astro.props;
       types.forEach(row => { const item = document.createElement('article'); const text = document.createElement('div'); add(text, 'b', row.name || ''); if ((row as any).description) add(text, 'span', (row as any).description); item.append(text); typeList.append(item); });
        cabinets.forEach(row => { const item = document.createElement('article'); const text = document.createElement('div'); add(text, 'b', `${row.code} · ${row.building} · ${row.cabinet}`); const details = [(row as any).shelf && `Prestatge: ${(row as any).shelf}`, (row as any).notes].filter(Boolean).join(' · '); if (details) add(text, 'span', details); item.append(text); cabinetList.append(item); });
        tags.forEach(tag => { const item = document.createElement('article'); add(item, 'b', `#${tag.normalized_name || tag.name}`); tagList.append(item); });
-       if (!types.length) add(typeList, 'p', 'Encara no hi ha tipologies.'); if (!tags.length) add(tagList, 'p', 'Encara no hi ha etiquetes.'); if (!cabinets.length) add(cabinetList, 'p', 'Encara no hi ha armaris.');
-    }
+        if (!types.length) add(typeList, 'p', 'Encara no hi ha tipologies.'); if (!tags.length) add(tagList, 'p', 'Encara no hi ha etiquetes.'); if (!cabinets.length) add(cabinetList, 'p', 'Encara no hi ha armaris.');
+     }
+      type ObjectHistoryEntry = { id: string; action: string; note: string | null; created_at: string; display_name: string | null };
+      type ObjectHistoryState = { entries: ObjectHistoryEntry[]; beforeId: string | null; hasMore: boolean; loading: boolean };
+     const objectHistory = new Map<string, ObjectHistoryState>();
+     const reviewObjectIdentifiers = new Map<string, string>();
+      const historyActionLabel = (action: string) => ({
+        created: 'Fitxa creada', edited: 'Fitxa editada', submitted_for_review: 'Fitxa enviada a revisió',
+        returned_to_draft: 'Fitxa retornada a esborrany', published: 'Fitxa publicada', archived: 'Fitxa arxivada'
+      }[action] || `Acció registrada: ${human(action).replace(/_/g, ' ')}`);
+     const historyDate = (value: string) => {
+       const date = new Date(value);
+       return Number.isNaN(date.valueOf()) ? 'Data desconeguda' : date.toLocaleString('ca-ES', { dateStyle: 'medium', timeStyle: 'short' });
+     };
+     function renderObjectHistory(target: HTMLElement, state: ObjectHistoryState) {
+       const list = target.querySelector<HTMLOListElement>('[data-history-list]')!;
+       const status = target.querySelector<HTMLElement>('[data-history-status]')!;
+       const more = target.querySelector<HTMLButtonElement>('[data-history-more]')!;
+       list.replaceChildren();
+       state.entries.forEach(entry => {
+         const item = document.createElement('li');
+         add(item, 'b', historyActionLabel(entry.action));
+         add(item, 'span', `${historyDate(entry.created_at)} · ${entry.display_name || 'Compte suprimit'}`);
+         if (entry.note) add(item, 'p', entry.note);
+         list.append(item);
+       });
+       status.textContent = state.loading ? 'Carregant l’historial…' : state.entries.length ? '' : 'Encara no hi ha accions registrades.';
+       more.hidden = !state.hasMore;
+       more.disabled = state.loading;
+       more.textContent = state.loading && state.entries.length ? 'Carregant…' : "Mostra'n més";
+     }
+     async function loadObjectHistory(objectId: string, target: HTMLElement) {
+       if (!supabase) return;
+        const state = objectHistory.get(objectId) || { entries: [], beforeId: null, hasMore: true, loading: false };
+       if (state.loading || !state.hasMore) return;
+       state.loading = true;
+       objectHistory.set(objectId, state);
+       renderObjectHistory(target, state);
+        const { data, error } = await supabase.rpc('get_catalog_object_history', { object_uuid: objectId, page_limit: 10, before_id: state.beforeId });
+       state.loading = false;
+       if (error) {
+         target.querySelector<HTMLElement>('[data-history-status]')!.textContent = 'No s’ha pogut carregar l’historial. Torna-ho a provar.';
+         const retry = target.querySelector<HTMLButtonElement>('[data-history-more]')!;
+         retry.hidden = false;
+         retry.disabled = false;
+         retry.textContent = 'Torna-ho a provar';
+         return;
+       }
+       const entries = (data || []) as ObjectHistoryEntry[];
+       state.entries.push(...entries);
+        state.beforeId = entries[entries.length - 1]?.id || state.beforeId;
+       state.hasMore = entries.length === 10;
+       renderObjectHistory(target, state);
+     }
+     function addObjectHistory(item: HTMLElement) {
+       if (item.querySelector('[data-object-history]')) return;
+       const editor = item.querySelector<HTMLElement>('.object-editor');
+       if (!editor) return;
+       const metadata = item.querySelector<HTMLElement>('div:first-child span')?.textContent || '';
+       const objectId = item.dataset.objectId || reviewObjectIdentifiers.get(metadata.split(' · ')[0]);
+       const title = item.dataset.objectTitle || item.querySelector('div:first-child b')?.textContent;
+       if (!objectId || !title) return;
+       const details = document.createElement('details');
+       details.className = 'object-editor object-history';
+       details.dataset.objectHistory = '';
+       const summary = document.createElement('summary');
+       summary.textContent = `Historial de la fitxa ${title}`;
+       const content = document.createElement('div');
+       content.className = 'object-history-content';
+       const status = document.createElement('p');
+       status.dataset.historyStatus = '';
+       status.setAttribute('role', 'status');
+       status.setAttribute('aria-live', 'polite');
+       const list = document.createElement('ol');
+       list.dataset.historyList = '';
+       const more = document.createElement('button');
+       more.type = 'button';
+       more.className = 'small-button';
+       more.dataset.historyMore = '';
+       more.textContent = "Mostra'n més";
+       more.hidden = true;
+       more.addEventListener('click', () => void loadObjectHistory(objectId, content));
+       content.append(status, list, more);
+       details.append(summary, content);
+       details.addEventListener('toggle', () => {
+         if (details.open && !objectHistory.has(objectId)) void loadObjectHistory(objectId, content);
+       });
+       item.insertBefore(details, editor);
+     }
+     const reviewObjectList = $('[data-review-objects]');
+     new MutationObserver(() => {
+       reviewObjectList.querySelectorAll<HTMLElement>('article').forEach(addObjectHistory);
+     }).observe(reviewObjectList, { childList: true, subtree: true });
     function renderReviewObjects(rows: any[], photos: ObjectPhoto[]) { const target = $('[data-review-objects]'); target.replaceChildren(); rows.forEach(row => { const item = document.createElement('article'); const heading = document.createElement('div'); add(heading, 'b', row.title); add(heading, 'span', `${row.inventory_code} · ${human(row.status)}`); item.append(heading); const controls = document.createElement('div'); if (row.status === 'draft' || row.status === 'pending_review') { const publish = add(controls, 'button', 'Publicar', 'small-button') as HTMLButtonElement; publish.type = 'button'; publish.onclick = () => updateObjectStatus(row.id, 'published'); } if (row.status === 'published' || row.status === 'pending_review') { const draft = add(controls, 'button', 'Tornar a esborrany', 'small-button') as HTMLButtonElement; draft.type = 'button'; draft.onclick = () => updateObjectStatus(row.id, 'draft'); } const archive = add(controls, 'button', 'Arxivar', 'small-button') as HTMLButtonElement; archive.type = 'button'; archive.onclick = () => updateObjectStatus(row.id, 'archived'); item.append(controls); const editFragment = ($('[data-teacher-edit-template]') as HTMLTemplateElement).content.cloneNode(true) as DocumentFragment; const editForm = editFragment.querySelector<HTMLFormElement>('[data-object-edit-form]')!; fillObjectForm(editForm, row); editForm.addEventListener('submit', event => saveObjectChanges(event, row.id)); item.append(editFragment); const photoFragment = ($('[data-photo-manager-template]') as HTMLTemplateElement).content.cloneNode(true) as DocumentFragment; const photoForm = photoFragment.querySelector<HTMLFormElement>('[data-photo-form]')!; photoForm.addEventListener('submit', event => uploadPhoto(event, row.id, photos.filter(photo => photo.object_id === row.id))); const photoList = photoFragment.querySelector<HTMLElement>('[data-photo-list]')!; renderPhotoList(photoList, photos.filter(photo => photo.object_id === row.id)); item.append(photoFragment); target.append(item); }); if (!rows.length) add(target, 'p', 'No hi ha fitxes recents per gestionar.'); }
     function renderPhotoList(target: HTMLElement, photos: ObjectPhoto[]) { target.replaceChildren(); photos.forEach((photo, index) => { const item = document.createElement('article'); const text = document.createElement('div'); add(text, 'b', `Fotografia ${index + 1}`); add(text, 'span', `Text alternatiu: ${photo.alt_text}`); if (photo.caption) add(text, 'span', `Peu: ${photo.caption}`); item.append(text); const remove = add(item, 'button', 'Eliminar', 'small-button') as HTMLButtonElement; remove.type = 'button'; remove.onclick = () => deletePhoto(photo); target.append(item); }); if (!photos.length) add(target, 'p', 'Encara no hi ha fotografies pujades.'); }
     function renderStudentPhotoLists(drafts: any[], photos: ObjectPhoto[], userId: string) { document.querySelectorAll<HTMLElement>('[data-own-objects] .photo-list').forEach((target, index) => { const objectPhotos = photos.filter(photo => photo.object_id === drafts[index]?.id); target.replaceChildren(); objectPhotos.forEach((photo, photoIndex) => { const item = document.createElement('article'); const text = document.createElement('div'); add(text, 'b', `Fotografia ${photoIndex + 1}`); add(text, 'span', `Text alternatiu: ${photo.alt_text}`); item.append(text); const remove = add(item, 'button', 'Eliminar', 'small-button') as HTMLButtonElement; remove.type = 'button'; remove.onclick = () => deleteStudentPhoto(photo, userId); target.append(item); }); if (!objectPhotos.length) add(target, 'p', 'Encara no hi ha fotografies pujades.'); }); }
@@ -403,5 +495,11 @@ const { mode = 'public' } = Astro.props;
   .collaboration-workspace--manage .profile-card,
   .collaboration-workspace--manage [data-student-dashboard] { display:none !important; }
   .collaboration-workspace--space [data-teacher-dashboard] > :not(.dashboard-summary) { display:none; }
-  .collaboration-workspace--space .account-area { padding-top:0; }
-</style>
+   .collaboration-workspace--space .account-area { padding-top:0; }
+   .object-history { width:100%; }
+   .object-history-content { padding-top:.75rem; }
+   .object-history ol { display:grid; gap:.6rem; margin:.75rem 0; padding-left:1.4rem; }
+   .object-history li > * { display:block; }
+   .object-history li span,.object-history li p { color:var(--muted); font-size:.9rem; }
+   .object-history li p { margin:.2rem 0 0; }
+ </style>
