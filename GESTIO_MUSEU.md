@@ -23,7 +23,8 @@ Document viu per prioritzar, anotar i fer seguiment de la gestio del Museu d'Inf
   - Implementat localment amb motiu, tasques i aclariment; pendent d'aplicar la migracio i comprovar el flux docent-alumnat al projecte remot.
 - [-] Permetre accions en lot sobre fitxes: etiquetar, arxivar i publicar quan siga segur.
   - Implementat localment amb validacio atomica, seleccio paginada i historial; pendent d'aplicar la migracio i comprovar-ho al projecte remot.
-- [ ] Afegir una llista clara de fitxes pendents de revisio com a vista principal docent.
+- [-] Afegir una llista clara de fitxes pendents de revisio com a vista principal docent.
+  - Implementat localment com a vista predeterminada, amb accés explicit a totes les fitxes; pendent de publicar i comprovar amb professorat.
 
 ### Persones i permisos
 

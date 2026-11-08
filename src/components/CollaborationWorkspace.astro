@@ -157,7 +157,8 @@ const { mode = 'public' } = Astro.props;
   }
       let teacherTypes: CatalogueOption[] = [], teacherCabinets: CatalogueOption[] = [], studentTypes: CatalogueOption[] = [], studentCabinets: CatalogueOption[] = [], tags: Tag[] = [], profileRows: Profile[] = [], donationRows: any[] = [], activeTeacher = false, activeAdministrator = false;
        const reviewPageSize = 20;
-       const reviewStatuses = ['pending_review', 'draft', 'published', 'archived'];
+        const reviewStatuses = ['pending_review', 'draft', 'published', 'archived'];
+        const reviewStatusFilters = ['all', ...reviewStatuses];
        let reviewRequest = 0;
        type BulkReviewObject = { id: string; title: string; status: string };
        const selectedReviewObjects = new Map<string, BulkReviewObject>();
@@ -167,7 +168,7 @@ const { mode = 'public' } = Astro.props;
       const reviewState = (): ReviewState => {
         const params = new URLSearchParams(window.location.search);
         const status = params.get('status') || '';
-        return { q: (params.get('q') || '').trim(), status: reviewStatuses.includes(status) ? status : '', type: params.get('type') || '', page: Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1) };
+         return { q: (params.get('q') || '').trim(), status: reviewStatusFilters.includes(status) ? status : 'pending_review', type: params.get('type') || '', page: Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1) };
       };
       const setReviewUrl = (state: ReviewState, navigation: 'replace' | 'push' = 'replace') => {
         const url = new URL(window.location.href);
@@ -233,11 +234,11 @@ const { mode = 'public' } = Astro.props;
        const requestId = ++reviewRequest;
        const requestedState = reviewState();
       const state = { ...requestedState, type: teacherTypes.some(type => type.id === requestedState.type) ? requestedState.type : '' };
-      if (state.type !== requestedState.type) setReviewUrl(state);
+       if (state.type !== requestedState.type || new URLSearchParams(window.location.search).get('status') !== state.status) setReviewUrl(state);
       syncReviewControls(state);
       const first = (state.page - 1) * reviewPageSize;
-      let query = supabase.from('catalog_objects').select('id, inventory_code, title, description, manufacturer, model, object_type_id, cabinet_id, production_year_start, production_year_end, ownership, information_url, video_url, status, updated_at, donors(display_name)', { count: 'exact' }).in('status', reviewStatuses).order('updated_at', { ascending: false }).order('id', { ascending: false });
-      if (state.status) query = query.eq('status', state.status);
+       let query = supabase.from('catalog_objects').select('id, inventory_code, title, description, manufacturer, model, object_type_id, cabinet_id, production_year_start, production_year_end, ownership, information_url, video_url, status, updated_at, donors(display_name)', { count: 'exact' }).order('updated_at', { ascending: false }).order('id', { ascending: false });
+       if (state.status !== 'all') query = query.eq('status', state.status);
       if (state.type) query = query.eq('object_type_id', state.type);
       const term = safeSearchTerm(state.q);
        if (term) { const pattern = `%${term}%`; query = query.or(`title.ilike.${pattern},inventory_code.ilike.${pattern},manufacturer.ilike.${pattern},model.ilike.${pattern}`); }
@@ -245,7 +246,8 @@ const { mode = 'public' } = Astro.props;
        if (requestId !== reviewRequest) return;
        const total = result.count || 0;
       if (!result.error && !result.data?.length && total && state.page > 1) { setReviewUrl({ ...state, page: Math.min(state.page - 1, Math.ceil(total / reviewPageSize)) }); await loadReviewObjects(); return; }
-      const summary = $('[data-review-summary]');
+       const summary = $('[data-review-summary]');
+       document.querySelector<HTMLButtonElement>('[data-review-show-all]')?.remove();
        if (result.error) { summary.textContent = 'No s’han pogut carregar les fitxes. Torna-ho a provar més tard.'; renderReviewObjects([], []); syncBulkActions([]); renderReviewPagination(0, state); return; }
        const objectIds = result.data.map(row => row.id);
        const photos = objectIds.length ? await supabase.from('object_photos').select('id, object_id, storage_path, alt_text, caption, position, created_at').in('object_id', objectIds).order('position') : { data: [] as ObjectPhoto[] };
@@ -254,7 +256,8 @@ const { mode = 'public' } = Astro.props;
           renderReviewObjects(result.data, photos.data || []);
           syncBulkActions(result.data);
       const shownFrom = total ? first + 1 : 0, shownTo = Math.min(first + result.data.length, total);
-      summary.textContent = total ? `Mostrant les fitxes ${shownFrom}–${shownTo} de ${total}.` : 'No hi ha fitxes que coincidisquen amb la cerca i els filtres.';
+       summary.textContent = total ? `Mostrant les fitxes ${shownFrom}–${shownTo} de ${total}.` : state.status === 'pending_review' && !state.q && !state.type ? 'La cua de revisió està al dia: no hi ha fitxes pendents.' : state.status === 'pending_review' && (state.q || state.type) ? 'No hi ha coincidències entre les fitxes pendents de revisió per a la cerca o tipologia indicades.' : 'No hi ha fitxes que coincidisquen amb la cerca i els filtres.';
+       if (!total && state.status === 'pending_review' && !state.q && !state.type) { const button = document.createElement('button'); button.type = 'button'; button.className = 'link-button'; button.textContent = 'Veure totes les fitxes'; button.dataset.reviewShowAll = ''; button.onclick = () => { if (selectedReviewObjects.size) clearReviewSelection('La selecció s’ha netejat perquè han canviat els criteris de cerca o filtre.'); setReviewUrl({ q: '', status: 'all', type: '', page: 1 }, 'push'); void loadReviewObjects(); }; summary.after(button); }
       renderReviewPagination(total, state);
     }
     function renderReviewPagination(total: number, state: ReviewState) {
@@ -546,7 +549,8 @@ const { mode = 'public' } = Astro.props;
   $('[data-new-password]').addEventListener('submit', async event => { event.preventDefault(); if (!supabase) return; const password = String(new FormData(event.currentTarget as HTMLFormElement).get('password')); const { error } = await supabase.auth.updateUser({ password }); if (error) setMessage(error.message, true); else { setMessage('Contrasenya actualitzada. Ja pots iniciar sessió.'); (event.currentTarget as HTMLFormElement).hidden = true; $('[data-login]').hidden = false; $('[data-signup]').hidden = false; } });
    $('[data-signout]').addEventListener('click', async () => { if (!supabase) return; await supabase.auth.signOut(); dashboard.hidden = true; authArea.hidden = false; setMessage('Sessió tancada.'); });
     document.querySelectorAll<HTMLInputElement>('input[name="status"][value="published"]').forEach(input => input.closest('label')?.remove());
-      const reviewFilter = document.querySelector<HTMLSelectElement>('[data-review-filter]');
+       const reviewFilter = document.querySelector<HTMLSelectElement>('[data-review-filter]');
+       reviewFilter?.querySelector('option[value=""]')?.setAttribute('value', 'all');
       const reviewForm = document.querySelector<HTMLFormElement>('[data-review-search]');
        const applyReviewCriteria = () => {
          if (!reviewForm) return;
@@ -556,7 +560,7 @@ const { mode = 'public' } = Astro.props;
         void loadReviewObjects();
       };
       reviewForm?.addEventListener('submit', event => { event.preventDefault(); applyReviewCriteria(); });
-       reviewForm?.addEventListener('reset', () => { window.setTimeout(() => { if (selectedReviewObjects.size) clearReviewSelection('La selecció s’ha netejat perquè han canviat els criteris de cerca o filtre.'); setReviewUrl({ q: '', status: '', type: '', page: 1 }, 'push'); void loadReviewObjects(); }); });
+        reviewForm?.addEventListener('reset', () => { window.setTimeout(() => { if (selectedReviewObjects.size) clearReviewSelection('La selecció s’ha netejat perquè han canviat els criteris de cerca o filtre.'); setReviewUrl({ q: '', status: 'pending_review', type: '', page: 1 }, 'push'); void loadReviewObjects(); }); });
       reviewFilter?.addEventListener('change', applyReviewCriteria);
       document.querySelector<HTMLSelectElement>('[data-review-type-filter]')?.addEventListener('change', applyReviewCriteria);
       window.addEventListener('popstate', () => { if (activeTeacher) void loadReviewObjects(); });
