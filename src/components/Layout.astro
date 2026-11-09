@@ -2,7 +2,7 @@
 import '../styles/global.css';
 const { title = 'Museu d’Informàtica', description = 'Museu d’Informàtica de l’IES l’Estació, Ontinyent.' } = Astro.props;
 const path = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '') || '/';
-const nav = [['/', 'Inici'], ['/cataleg/', 'Catàleg'], ['/visita/', 'Visita'], ['/recorreguts/', 'Recorreguts'], ['/laboratori/', 'Laboratori'], ['/col·labora/', 'Col·labora']];
+const nav = [['/', 'Inici'], ['/cataleg/', 'Catàleg'], ['/personatges/', 'Personatges'], ['/visita/', 'Visita'], ['/recorreguts/', 'Recorreguts'], ['/laboratori/', 'Laboratori'], ['/col·labora/', 'Col·labora']];
 const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
 const isCurrent = (route: string) => path === route || (route === '/cataleg/' && path.startsWith('/cataleg/'));
 ---

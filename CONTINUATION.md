@@ -34,7 +34,14 @@ Follow-up verification:
 
 ## Remote Schema Note
 
-- `npx supabase migration list --remote` on 2026-11-06 confirms that all local migrations through `202610281200` are applied to the linked remote project.
+- `npx supabase migration list --remote` confirms that all local migrations through `202610281700` are applied to the linked remote project.
+
+## Historical Figures
+
+- Migration `supabase/migrations/202610281700_historical_figures.sql` is applied to the remote project.
+- It creates private teacher-managed historical figures, a public published-only view and a private image bucket. It also adds six published text-first examples: Ada Lovelace, Alan Turing, Grace Hopper, Hedy Lamarr, Margaret Hamilton and Frances Allen.
+- Public routes are `/personatges/` and `/personatges/detall/?slug=<slug>`. Each detail includes an A4 vertical print layout that can be saved as PDF from the browser.
+- Verify public and teacher RLS access, then test the A4 print dialog in a browser. The examples intentionally have no portraits until credited images are added.
 
 ## Validation
 
