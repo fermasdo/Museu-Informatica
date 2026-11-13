@@ -2,7 +2,7 @@
 import '../styles/global.css';
 const { title = 'Museu d’Informàtica', description = 'Museu d’Informàtica de l’IES l’Estació, Ontinyent.' } = Astro.props;
 const path = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '') || '/';
-const nav = [['/', 'Inici'], ['/cataleg/', 'Catàleg'], ['/personatges/', 'Personatges'], ['/visita/', 'Visita'], ['/recorreguts/', 'Recorreguts'], ['/laboratori/', 'Laboratori'], ['/col·labora/', 'Col·labora']];
+const nav = [['/', 'Inici'], ['/cataleg/', 'Catàleg'], ['/personatges/', 'Personatges'], ['/recorreguts/', 'Recorreguts'], ['/laboratori/', 'Laboratori'], ['/col·labora/', 'Col·labora']];
 const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
 const isCurrent = (route: string) => path === route || (route === '/cataleg/' && path.startsWith('/cataleg/'));
 ---
@@ -35,7 +35,7 @@ const isCurrent = (route: string) => path === route || (route === '/cataleg/' &&
       </div>
     </header>
     <main id="contingut"><slot /></main>
-    <footer class="site-footer"><div><a class="brand" href={import.meta.env.BASE_URL}><svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 32V8h7l9 11 9-11h7v24h-7V18l-9 10-9-10v14z"/><path d="M9 5h22"/></svg><span>Museu d’Informàtica<br /><b>IES l’Estació</b></span></a><p>Memòria digital a l’IES l’Estació.<br />Ontinyent</p></div><div><a href="mailto:museu.informatica@iesestacio.com">museu.informatica@iesestacio.com</a><p>Projecte educatiu obert a la comunitat.</p></div></footer>
+    <footer class="site-footer"><div><a class="brand" href={import.meta.env.BASE_URL}><svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 32V8h7l9 11 9-11h7v24h-7V18l-9 10-9-10v14z"/><path d="M9 5h22"/></svg><span>Museu d’Informàtica<br /><b>IES l’Estació</b></span></a><p>Memòria digital a l’IES l’Estació.<br />Ontinyent</p></div><p>Projecte educatiu obert a la comunitat.</p></footer>
     <script>
       import { supabase } from '../lib/supabase';
       const menu = document.querySelector<HTMLDetailsElement>('[data-mobile-menu]');

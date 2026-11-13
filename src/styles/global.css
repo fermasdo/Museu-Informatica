@@ -113,6 +113,9 @@
 
 .page-intro { padding-top:clamp(2rem,5vw,4rem); padding-bottom:1rem; }
 .page-intro h1 { margin-bottom:1rem; }
+
+/* El catàleg segueix immediatament la seua capçalera compacta. */
+.compact-intro + .catalogue { padding-top:clamp(2.5rem,5vw,4rem); }
 .private-page { padding-top:clamp(2rem,5vw,4rem); padding-bottom:clamp(2.5rem,6vw,4rem); }
 .private-page h1 { max-width:16ch; font-size:clamp(2.25rem,5vw,3.25rem); }
 .private-page h2,.dashboard-header h2 { font-size:clamp(1.8rem,4vw,2.5rem); }
@@ -142,6 +145,22 @@
 .print-label { color:#08110C; }
 
 .filters input,.filters select,textarea,.auth-grid input,.data-form input,.data-form select,.data-form textarea,.account-menu-panel input { background:var(--background); color:var(--text); border-color:var(--line); }
+
+/* Targetes del catàleg: cada peça manté el seu contorn i un únic enllaç principal. */
+.pieces-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; border:0; }
+.piece-card { min-height:0; padding:0; border:1px solid var(--line); }
+.piece-card:first-child { border-top:1px solid var(--line); }
+.piece-card-link { display:flex; flex:1; flex-direction:column; color:inherit; text-decoration:none; }
+.piece-card-link:focus-visible { outline:3px solid var(--focus); outline-offset:3px; }
+.piece-card:focus-within { background:var(--surface-raised); }
+.piece-visual { aspect-ratio:4 / 3; margin:0; overflow:hidden; border:0; border-bottom:1px solid var(--line); }
+.piece-image { width:100%; height:100%; object-fit:cover; }
+.piece-content { padding:1.1rem; }
+.piece-card h3 { text-decoration:none; }
+.piece-card h3 a { text-decoration:none; }
+.piece-image-credit { margin:.2rem 1.1rem 1.1rem; }
+@media (min-width:701px) and (max-width:980px) { .pieces-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:700px) { .pieces-grid { grid-template-columns:1fr; } }
 input::placeholder,textarea::placeholder { color:var(--muted); opacity:1; }
 select { color-scheme:dark; }
 .role-choice,.tag-choice { border-color:var(--line); }
@@ -180,3 +199,4 @@ select { color-scheme:dark; }
 /* Retrats de personatges: metadades llegibles i controls còmodes en mòbil. */
 .figure-image-editor { margin:1rem 0; border:1px solid var(--line); }.figure-image-editor legend { padding:0 .25rem; font:500 .78rem 'DM Mono',monospace; }.figure-image-editor .form-note { padding-inline:.8rem; }.figure-image-editor > label:not(.check),.figure-image-editor > .form-row { margin-inline:.8rem; }.figure-image-editor input[type="file"] { padding:.55rem; }
 @media print { .fallback-sheets { display:none!important; } }
+.collaborate { grid-template-columns:repeat(2,minmax(0,1fr)); }

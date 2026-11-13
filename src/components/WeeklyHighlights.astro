@@ -1,0 +1,147 @@
+---
+import { announcements } from '../data/announcements';
+import { pieces } from '../data/pieces';
+import { publicFigures } from '../data/publicFigures';
+
+const base = import.meta.env.BASE_URL;
+const cycles = [
+  { piece: 'Olivetti Programma 101', figure: 'grace-hopper', title: 'Programar abans del xip.', thread: 'Fil de l’arxiu: programació' },
+  { piece: 'Sinclair ZX Spectrum', figure: 'ada-lovelace', title: 'Un teclat, color i idees per escriure.', thread: 'Fil de l’arxiu: programació' },
+  { piece: 'Game Boy', figure: 'hedy-lamarr', title: 'La tecnologia ix a passejar.', thread: 'Fil de l’arxiu: tecnologia de comunicacions' },
+];
+const now = new Date();
+const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+const sunday = new Date(monday);
+sunday.setDate(monday.getDate() + 6);
+const cycle = cycles[(Math.floor(monday.getTime() / 604800000) % cycles.length + cycles.length) % cycles.length];
+const initialPiece = pieces.find((piece) => piece.name === cycle.piece)!;
+const initialAnnouncement = announcements.find((announcement) => announcement.title === initialPiece.name)!;
+const initialFigure = publicFigures.find((figure) => figure.slug === cycle.figure)!;
+const dateFormat = new Intl.DateTimeFormat('ca-ES', { day: 'numeric', month: 'long' });
+const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+---
+
+<section class="weekly-highlights" aria-labelledby="weekly-highlights-title" data-weekly-highlights>
+  <header class="weekly-highlights-header">
+    <div>
+      <p class="eyebrow">SENYAL SETMANAL</p>
+      <p class="weekly-range" aria-live="polite">Setmana del <time data-week-start datetime={localDate(monday)}>{dateFormat.format(monday)}</time> al <time data-week-end datetime={localDate(sunday)}>{dateFormat.format(sunday)}</time></p>
+      <h2 id="weekly-highlights-title" data-weekly-title>{cycle.title}</h2>
+    </div>
+    <p class="weekly-intro" data-weekly-intro>Una peça, una veu i un anunci per seguir un fil de l’arxiu. Les dates provenen de les fitxes disponibles; quan no hi ha una relació documental directa, l’enllacem com a Fil de l’arxiu.</p>
+  </header>
+
+  <div class="weekly-cards">
+    <article class="weekly-card weekly-piece">
+      <p class="weekly-number">01 <span>PEÇA</span></p>
+      <p class="eyebrow" data-piece-meta>{initialPiece.year} · {initialPiece.type}</p>
+      <h3 data-piece-name>{initialPiece.name}</h3>
+      <p data-piece-note>{initialPiece.note}</p>
+      <dl class="weekly-meta"><div><dt>Inventari</dt><dd data-piece-mark>{initialPiece.mark}</dd></div><div><dt>Espai</dt><dd data-piece-location>{initialPiece.location}</dd></div></dl>
+      <a class="weekly-cta" data-piece-link href={`${base}cataleg/detall/?id=${initialPiece.mark}`}>Obri la fitxa de peça <span aria-hidden="true">→</span></a>
+    </article>
+
+    <article class="weekly-card weekly-figure">
+      <p class="weekly-number">02 <span>PERSONATGE</span></p>
+      <p class="eyebrow" data-figure-meta>{initialFigure.field} · {initialFigure.birth_year}–{initialFigure.death_year}</p>
+      <h3 data-figure-name>{initialFigure.full_name}</h3>
+      <p data-figure-summary>{initialFigure.summary}</p>
+      <dl class="weekly-meta"><div><dt>Connexió</dt><dd data-figure-thread>{cycle.thread}</dd></div><div><dt>Datació</dt><dd data-figure-years>{initialFigure.birth_year}–{initialFigure.death_year}</dd></div></dl>
+      <a class="weekly-cta" data-figure-link href={`${base}personatges/detall/?slug=${initialFigure.slug}`}>Llig la fitxa biogràfica <span aria-hidden="true">→</span></a>
+    </article>
+
+    <article class="weekly-card weekly-announcement">
+      <p class="weekly-number">03 <span>ARXIU AUDIOVISUAL</span></p>
+      <p class="eyebrow" data-announcement-meta>{initialAnnouncement.year} · {initialAnnouncement.category}</p>
+      <h3 data-announcement-title>{initialAnnouncement.title}</h3>
+      <p data-announcement-description>{initialAnnouncement.description}</p>
+      <dl class="weekly-meta"><div><dt>Any de la fitxa</dt><dd data-announcement-year>{initialAnnouncement.year}</dd></div><div><dt>Categoria</dt><dd data-announcement-category>{initialAnnouncement.category}</dd></div></dl>
+      <div class="weekly-actions"><a class="weekly-cta" href={`${base}activitats/`}>Explora l’arxiu <span aria-hidden="true">→</span></a><a class="weekly-video" data-announcement-link href={initialAnnouncement.youtubeUrl} target="_blank" rel="noopener noreferrer">Cerca aquesta referència a YouTube <span aria-hidden="true">↗</span><span class="sr-only"> (s’obri en una pestanya nova)</span></a></div>
+    </article>
+  </div>
+
+  <nav class="weekly-links" aria-label="Continua la selecció setmanal"><a href={`${base}cataleg/`}>Catàleg complet <span aria-hidden="true">→</span></a><a href={`${base}personatges/`}>Tots els personatges <span aria-hidden="true">→</span></a><a href={`${base}activitats/`}>Activitats i anuncis <span aria-hidden="true">→</span></a></nav>
+</section>
+
+<script>
+  import { announcements } from '../data/announcements';
+  import { pieces } from '../data/pieces';
+  import { publicFigures } from '../data/publicFigures';
+
+  const base = import.meta.env.BASE_URL;
+  const byName = <T extends { name?: string; title?: string }>(items: T[], name: string) => items.find((item) => item.name === name || item.title === name)!;
+  const cycles = [
+    { piece: 'Olivetti Programma 101', figure: 'grace-hopper', title: 'Programar abans del xip.', thread: 'Fil de l’arxiu: programació' },
+    { piece: 'Sinclair ZX Spectrum', figure: 'ada-lovelace', title: 'Un teclat, color i idees per escriure.', thread: 'Fil de l’arxiu: programació' },
+    { piece: 'Game Boy', figure: 'hedy-lamarr', title: 'La tecnologia ix a passejar.', thread: 'Fil de l’arxiu: tecnologia de comunicacions' },
+  ];
+  const text = (selector: string, value: string | number) => { const element = document.querySelector<HTMLElement>(selector); if (element) element.textContent = String(value); };
+  const href = (selector: string, value: string) => document.querySelector<HTMLAnchorElement>(selector)?.setAttribute('href', value);
+  const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const today = new Date();
+  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const cycleIndex = Math.floor(monday.getTime() / 604800000) % cycles.length;
+  const cycle = cycles[(cycleIndex + cycles.length) % cycles.length];
+  const piece = byName(pieces, cycle.piece);
+  const announcement = byName(announcements, cycle.piece);
+  const figure = publicFigures.find((item) => item.slug === cycle.figure)!;
+  const dateFormat = new Intl.DateTimeFormat('ca-ES', { day: 'numeric', month: 'long' });
+  const years = [figure.birth_year, figure.death_year].filter((year) => year !== null).join('–');
+
+  document.querySelectorAll<HTMLTimeElement>('[data-week-start], [data-week-end]').forEach((element) => {
+    const date = element.hasAttribute('data-week-start') ? monday : sunday;
+     element.dateTime = localDate(date);
+    element.textContent = dateFormat.format(date);
+  });
+  text('[data-weekly-title]', cycle.title);
+  text('[data-piece-meta]', `${piece.year} · ${piece.type}`);
+  text('[data-piece-name]', piece.name);
+  text('[data-piece-note]', piece.note);
+  text('[data-piece-mark]', piece.mark);
+  text('[data-piece-location]', piece.location);
+  href('[data-piece-link]', `${base}cataleg/detall/?id=${encodeURIComponent(piece.mark)}`);
+  text('[data-figure-meta]', `${figure.field} · ${years}`);
+  text('[data-figure-name]', figure.full_name);
+  text('[data-figure-summary]', figure.summary);
+  text('[data-figure-thread]', cycle.thread);
+  text('[data-figure-years]', years);
+  href('[data-figure-link]', `${base}personatges/detall/?slug=${encodeURIComponent(figure.slug)}`);
+  text('[data-announcement-meta]', `${announcement.year} · ${announcement.category}`);
+  text('[data-announcement-title]', announcement.title);
+  text('[data-announcement-description]', announcement.description);
+  text('[data-announcement-year]', announcement.year);
+  text('[data-announcement-category]', announcement.category);
+  href('[data-announcement-link]', announcement.youtubeUrl);
+</script>
+
+<style>
+  .weekly-highlights { max-width:var(--max); margin:0 auto; padding:clamp(4.5rem,9vw,8rem) 1.25rem; }
+  .weekly-highlights-header { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(16rem,.85fr); gap:2rem; align-items:end; padding-bottom:2rem; border-bottom:1px solid var(--line); }
+  .weekly-range { margin-bottom:.6rem; color:var(--muted); font:500 .75rem 'DM Mono',monospace; }
+  .weekly-range time { color:var(--text); }
+  .weekly-highlights h2 { max-width:15ch; margin-bottom:0; }
+  .weekly-intro { max-width:38rem; margin:0; color:var(--muted); }
+  .weekly-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border:1px solid var(--line); border-top:0; }
+  .weekly-card { display:flex; flex-direction:column; min-height:25rem; padding:1.2rem; background:var(--paper); border-right:1px solid var(--line); }
+  .weekly-card:last-child { border-right:0; }
+  .weekly-card h3 { margin-bottom:.65rem; font-size:clamp(1.45rem,2.4vw,2rem); }
+  .weekly-card > p:not(.eyebrow):not(.weekly-number) { color:var(--muted); }
+  .weekly-number { display:flex; gap:.45rem; align-items:baseline; margin-bottom:2.5rem; color:var(--accent); font:1.5rem/1 'DM Mono',monospace; }
+  .weekly-number span { color:var(--muted); font-size:.7rem; letter-spacing:.08em; }
+  .weekly-meta { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin:auto 0 1.2rem; padding-top:1rem; border-top:1px solid var(--line); }
+  .weekly-meta dt { color:var(--muted); font:500 .62rem 'DM Mono',monospace; text-transform:uppercase; letter-spacing:.06em; }
+  .weekly-meta dd { margin:.2rem 0 0; font-size:.84rem; font-weight:600; }
+  .weekly-cta,.weekly-video { min-height:44px; display:inline-flex; align-items:center; gap:.45rem; font-weight:700; text-underline-offset:4px; }
+  .weekly-actions { display:grid; gap:.35rem; }
+  .weekly-video { min-height:32px; font-size:.85rem; }
+  .weekly-cta:hover,.weekly-video:hover,.weekly-links a:hover { color:var(--accent); }
+  .weekly-links { display:flex; flex-wrap:wrap; gap:1.25rem 2rem; padding-top:1.25rem; border-bottom:1px solid var(--line); }
+  .weekly-links a { min-height:44px; display:inline-flex; align-items:center; gap:.45rem; font-weight:700; text-underline-offset:4px; }
+  @media (max-width:700px) { .weekly-highlights-header,.weekly-cards { grid-template-columns:1fr; }.weekly-highlights-header { align-items:start; }.weekly-card { min-height:0; border-right:0; border-bottom:1px solid var(--line); }.weekly-card:last-child { border-bottom:0; }.weekly-number { margin-bottom:1.75rem; } }
+  @media (prefers-reduced-motion:no-preference) { .weekly-card { transition:background .2s,transform .2s; }.weekly-card:hover { background:var(--surface-raised); transform:translateY(-3px); } }
+</style>

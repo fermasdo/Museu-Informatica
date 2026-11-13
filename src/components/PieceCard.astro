@@ -6,8 +6,9 @@ const source = piece.imagePublicUrl ?? fallback;
 const tags = [...piece.tags, piece.type.toLowerCase()];
 ---
 <article class="piece-card" data-piece data-decade={piece.decade} data-type={piece.type} data-tags={tags.join('|')} data-search-text={`${piece.name} ${piece.year} ${piece.type} ${piece.note} ${piece.mark} ${tags.join(' ')}`}>
-  <div class="piece-visual"><img class="piece-image" src={source} alt={piece.imageAlt} width="640" height="480" loading="lazy" decoding="async" onerror={`this.hidden=true;this.parentElement?.querySelector('[data-photo-fallback]')?.removeAttribute('hidden');`} /><p class="photo-fallback" data-photo-fallback hidden>Fotografia pendent</p></div>
+  <a class="piece-card-link" data-detail-link href={`${import.meta.env.BASE_URL}cataleg/detall/?id=${encodeURIComponent(piece.mark)}`}>
+    <div class="piece-visual"><img class="piece-image" src={source} alt={piece.imageAlt} width="640" height="480" loading="lazy" decoding="async" onerror={`this.hidden=true;this.parentElement?.querySelector('[data-photo-fallback]')?.removeAttribute('hidden');`} /><p class="photo-fallback" data-photo-fallback hidden>Fotografia pendent</p></div>
+    <div class="piece-content"><p class="eyebrow">{piece.year} · {piece.type}</p><h3>{piece.name}</h3><p>{piece.note}</p><div class="hashtag-list">{tags.slice(0, 2).map(tag => <span class="hashtag">#{tag}</span>)}</div></div>
+  </a>
   {piece.isReferenceImage && piece.imageCreditUrl && piece.imageCreditText && <p class="piece-image-credit">Imatge de referència: <a href={piece.imageCreditUrl} target="_blank" rel="noopener noreferrer">{piece.imageCreditText} <span class="sr-only">(s’obri en una pestanya nova)</span><span aria-hidden="true">↗</span></a>{piece.imageLicenseUrl && piece.imageLicenseText && <> · <a href={piece.imageLicenseUrl} target="_blank" rel="noopener noreferrer">{piece.imageLicenseText} <span class="sr-only">(s’obri en una pestanya nova)</span><span aria-hidden="true">↗</span></a></>}</p>}
-  <div class="piece-content"><p class="eyebrow">{piece.year} · {piece.type}</p><h3><a data-detail-link href={`${import.meta.env.BASE_URL}cataleg/detall/?id=${encodeURIComponent(piece.mark)}`}>{piece.name}</a></h3><p>{piece.note}</p><div class="hashtag-list">{tags.slice(0, 2).map(tag => <span class="hashtag">#{tag}</span>)}</div></div>
-  <div class="piece-meta"><a class="piece-cta" data-detail-link href={`${import.meta.env.BASE_URL}cataleg/detall/?id=${encodeURIComponent(piece.mark)}`}>Descobreix la peça <span aria-hidden="true">→</span></a></div>
 </article>
