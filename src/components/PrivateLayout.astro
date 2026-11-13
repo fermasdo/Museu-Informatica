@@ -11,10 +11,10 @@ const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
     <header class="private-header">
       <a class="brand" href={import.meta.env.BASE_URL} aria-label="Museu d’Informàtica, inici"><svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 32V8h7l9 11 9-11h7v24h-7V18l-9 10-9-10v14z"/><path d="M9 5h22"/></svg><span>Museu<br /><b>d’Informàtica</b></span></a>
       <a class="return-link" href={import.meta.env.BASE_URL}>← Tornar al museu</a>
-      <details class="account-menu" data-private-account><summary><span class="account-avatar" data-private-avatar aria-hidden="true">?</span><span data-private-name>Compte</span></summary><div class="account-menu-panel"><a href={href('/espai/')}>El meu espai</a><a href={href('/perfil/')}>Edita el perfil</a><a href={href('/gestio-cataleg/')} data-private-management hidden>Gestiona el catàleg</a><button type="button" data-private-signout>Tanca sessió</button></div></details>
+      <details class="account-menu" data-private-account hidden><summary><span class="account-avatar" data-private-avatar aria-hidden="true">?</span><span data-private-name>Compte</span></summary><div class="account-menu-panel"><a href={href('/espai/')}>El meu espai</a><a href={href('/perfil/')}>Edita el perfil</a><a href={href('/gestio-cataleg/')} data-private-management hidden>Gestiona el catàleg</a><button type="button" data-private-signout>Tanca sessió</button></div></details>
     </header>
-    <nav class="private-nav" aria-label="Navegació del compte"><a href={href('/espai/')} aria-current={current === 'space' ? 'page' : undefined}>Espai</a><a href={href('/perfil/')} aria-current={current === 'profile' ? 'page' : undefined}>Perfil</a><a href={href('/gestio-cataleg/')} data-private-management hidden aria-current={current === 'manage' ? 'page' : undefined}>Gestió del catàleg</a></nav>
-    <main id="contingut-privat" tabindex="-1"><slot /></main>
+    <nav class="private-nav" data-private-navigation aria-label="Navegació del compte" hidden><a href={href('/espai/')} aria-current={current === 'space' ? 'page' : undefined}>Espai</a><a href={href('/perfil/')} aria-current={current === 'profile' ? 'page' : undefined}>Perfil</a><a href={href('/gestio-cataleg/')} data-private-management hidden aria-current={current === 'manage' ? 'page' : undefined}>Gestió del catàleg</a></nav>
+    <main id="contingut-privat" data-private-content tabindex="-1" hidden><slot /></main>
     <p class="private-service-notice" data-private-service-notice hidden role="status"><span data-private-service-message></span> <a href={href('/col·labora/')}>Torna a l’accés</a></p>
     <script>
       import { supabase } from '../lib/supabase';
@@ -24,9 +24,11 @@ const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
        async function account() {
          if (!supabase) { notice('El servei de compte no està disponible ara mateix.'); return; }
          try {
-           const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-           if (sessionError) throw sessionError;
-           if (!session) { window.location.replace(`${base}col·labora/`); return; }
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError) throw sessionError;
+            if (!session) { window.location.replace(`${base}col·labora/`); return; }
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (userError || !user) { window.location.replace(`${base}col·labora/`); return; }
            const [{ data: profile, error: profileError }, { data: administrator, error: administratorError }] = await Promise.all([
              supabase.from('profiles').select('display_name, role, avatar_path').eq('id', session.user.id).maybeSingle(),
              supabase.rpc('is_administrator')
@@ -40,7 +42,10 @@ const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
              const { data, error } = await supabase.storage.from('profile-avatars').createSignedUrl(profile.avatar_path, 3600);
              if (!error && data?.signedUrl) { const image = new Image(40, 40); image.alt = ''; image.src = data.signedUrl; image.onload = () => avatar.replaceChildren(image); }
            }
-           document.querySelectorAll<HTMLElement>('[data-private-management]').forEach(link => link.hidden = !(profile?.role === 'teacher' || administrator === true));
+            document.querySelectorAll<HTMLElement>('[data-private-management]').forEach(link => link.hidden = !(profile?.role === 'teacher' || administrator === true));
+            document.querySelector<HTMLElement>('[data-private-account]')!.hidden = false;
+            document.querySelector<HTMLElement>('[data-private-navigation]')!.hidden = false;
+            document.querySelector<HTMLElement>('[data-private-content]')!.hidden = false;
          } catch {
            notice('No s’ha pogut carregar el teu compte. Pots tornar a intentar l’accés.');
          }

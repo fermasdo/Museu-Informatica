@@ -167,9 +167,16 @@ select { color-scheme:dark; }
 .collaboration-workspace .dashboard-section .student-review-feedback,
 .collaboration-workspace .dashboard-section .bulk-actions { background:var(--surface-raised); color:var(--text); border-color:var(--line); }
 
+/* Seccions de gestió: navegació local clara, usable amb teclat i desplaçable en pantalles estretes. */
+.management-sections { display:flex; gap:.35rem; overflow-x:auto; margin-top:1.5rem; padding:.35rem 0; border-block:1px solid var(--line); scrollbar-color:var(--line) transparent; }.management-sections a { flex:0 0 auto; display:inline-flex; align-items:center; min-height:44px; padding:.55rem .8rem; border:1px solid transparent; color:var(--text); font:600 .78rem 'DM Mono',monospace; text-decoration:none; }.management-sections a:hover { background:var(--surface-raised); }.management-sections a[aria-current="page"] { background:var(--active); border-color:var(--line); color:var(--text); }.management-sections a[aria-current="page"]::before { content:'›'; margin-right:.4rem; color:var(--accent); font:700 1rem/1 'DM Mono',monospace; }
+
 @media (max-width:700px) {
   .page-intro { padding-top:2rem; }
   .private-page { padding-top:2rem; padding-bottom:2.5rem; }
   .navigation-panel { border-color:var(--line); box-shadow:4px 4px 0 var(--active); }
   .navigation-panel nav a { padding:.65rem .75rem; border-bottom-color:var(--line); }
 }
+
+/* Retrats de personatges: metadades llegibles i controls còmodes en mòbil. */
+.figure-image-editor { margin:1rem 0; border:1px solid var(--line); }.figure-image-editor legend { padding:0 .25rem; font:500 .78rem 'DM Mono',monospace; }.figure-image-editor .form-note { padding-inline:.8rem; }.figure-image-editor > label:not(.check),.figure-image-editor > .form-row { margin-inline:.8rem; }.figure-image-editor input[type="file"] { padding:.55rem; }
+@media print { .fallback-sheets { display:none!important; } }
