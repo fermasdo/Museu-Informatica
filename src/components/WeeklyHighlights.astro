@@ -126,9 +126,8 @@ const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth(
   .weekly-range time { color:var(--text); }
   .weekly-highlights h2 { max-width:15ch; margin-bottom:0; }
   .weekly-intro { max-width:38rem; margin:0; color:var(--muted); }
-  .weekly-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border:1px solid var(--line); border-top:0; }
-  .weekly-card { display:flex; flex-direction:column; min-height:25rem; padding:1.2rem; background:var(--paper); border-right:1px solid var(--line); }
-  .weekly-card:last-child { border-right:0; }
+  .weekly-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; }
+  .weekly-card { display:flex; flex-direction:column; min-height:25rem; padding:1.2rem; overflow:hidden; border:1px solid var(--line); border-radius:var(--radius-monitor); background:var(--paper); }
   .weekly-card h3 { margin-bottom:.65rem; font-size:clamp(1.45rem,2.4vw,2rem); }
   .weekly-card > p:not(.eyebrow):not(.weekly-number) { color:var(--muted); }
   .weekly-number { display:flex; gap:.45rem; align-items:baseline; margin-bottom:2.5rem; color:var(--accent); font:1.5rem/1 'DM Mono',monospace; }
@@ -142,6 +141,8 @@ const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth(
   .weekly-cta:hover,.weekly-video:hover,.weekly-links a:hover { color:var(--accent); }
   .weekly-links { display:flex; flex-wrap:wrap; gap:1.25rem 2rem; padding-top:1.25rem; border-bottom:1px solid var(--line); }
   .weekly-links a { min-height:44px; display:inline-flex; align-items:center; gap:.45rem; font-weight:700; text-underline-offset:4px; }
-  @media (max-width:700px) { .weekly-highlights-header,.weekly-cards { grid-template-columns:1fr; }.weekly-highlights-header { align-items:start; }.weekly-card { min-height:0; border-right:0; border-bottom:1px solid var(--line); }.weekly-card:last-child { border-bottom:0; }.weekly-number { margin-bottom:1.75rem; } }
+  .weekly-card :focus-visible { outline-offset:-3px; }
+
+  @media (max-width:700px) { .weekly-highlights-header,.weekly-cards { grid-template-columns:1fr; }.weekly-highlights-header { align-items:start; }.weekly-card { min-height:0; }.weekly-number { margin-bottom:1.75rem; } }
   @media (prefers-reduced-motion:no-preference) { .weekly-card { transition:background .2s,transform .2s; }.weekly-card:hover { background:var(--surface-raised); transform:translateY(-3px); } }
 </style>
