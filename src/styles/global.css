@@ -208,5 +208,25 @@ select { color-scheme:dark; }
 .catalogue-query-reset:hover { background:var(--active); color:var(--accent); }
 .catalogue-query-reset svg { width:1.25rem; height:1.25rem; }
 @media (min-width:900px) { .catalogue-query { grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:end; gap:1.25rem; } }
+
+/* Targetes unificades: una acció principal, visual protegit i contorns CRT. */
+.pieces-grid { gap:.75rem; background:transparent; border:0; }
+.figures-grid { gap:.75rem; background:transparent; border:0; }
+.piece-card,.figure-card { overflow:visible; border:1px solid var(--line); border-radius:var(--radius-monitor); background:var(--surface); }
+.figure-card { display:flex; flex-direction:column; }
+.piece-card-link,.figure-card-link { display:flex; flex-direction:column; flex:1; padding:.625rem .625rem 0; color:inherit; text-decoration:none; }
+.piece-card-link:visited,.piece-card-link:hover,.piece-card-link:focus,.figure-card-link:visited,.figure-card-link:hover,.figure-card-link:focus { color:inherit; text-decoration:none; }
+.piece-card-link:focus-visible,.figure-card-link:focus-visible { outline:3px solid var(--focus); outline-offset:4px; }
+.piece-card:focus-within,.figure-card:focus-within { background:var(--surface-raised); }
+.piece-visual,.figure-card-visual { aspect-ratio:4 / 3; margin:0; overflow:hidden; border:0; border-radius:calc(var(--radius-monitor) - .25rem); }
+.piece-image,.figure-card-visual img { width:100%; height:100%; object-fit:cover; }
+.photo-fallback { width:100%; height:100%; display:grid; place-items:center; }
+.piece-content,.figure-card-body { flex:1; padding:1rem .375rem 1.125rem; }
+.piece-card h3,.figure-card h2,.piece-card h3 a,.figure-card h2 a,.piece-card h3 a:visited,.figure-card h2 a:visited { text-decoration:none; }
+.piece-card h3,.figure-card h2 { margin-bottom:.6rem; }
+.piece-image-credit,.figure-image-credit { margin:.15rem 1rem 1rem; color:var(--muted); font:500 .67rem 'DM Mono',monospace; }
+.figure-image-credit { min-height:24px; }
+@media (min-width:701px) and (max-width:980px) { .pieces-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .figures-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:700px) { .pieces-grid { grid-template-columns:1fr; } .figures-grid { grid-template-columns:1fr; } }
 @media (min-width:600px) and (max-width:899px) { .catalogue-query-search { grid-column:1 / -1; } }
 @media (max-width:599px) { .catalogue-query-refinements { gap:.5rem; } }
