@@ -39,7 +39,7 @@ const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth(
       <h3 data-piece-name>{initialPiece.name}</h3>
       <p data-piece-note>{initialPiece.note}</p>
       <dl class="weekly-meta"><div><dt>Inventari</dt><dd data-piece-mark>{initialPiece.mark}</dd></div><div><dt>Espai</dt><dd data-piece-location>{initialPiece.location}</dd></div></dl>
-      <a class="weekly-cta" data-piece-link href={`${base}cataleg/detall/?id=${initialPiece.mark}`}>Obri la fitxa de peça <span aria-hidden="true">→</span></a>
+      <a class="weekly-cta" data-piece-link href={`${base}cataleg/detall/?id=${initialPiece.mark}`}>Obri la fitxa de peça</a>
     </article>
 
     <article class="weekly-card weekly-figure">
@@ -48,7 +48,7 @@ const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth(
       <h3 data-figure-name>{initialFigure.full_name}</h3>
       <p data-figure-summary>{initialFigure.summary}</p>
       <dl class="weekly-meta"><div><dt>Connexió</dt><dd data-figure-thread>{cycle.thread}</dd></div><div><dt>Datació</dt><dd data-figure-years>{initialFigure.birth_year}–{initialFigure.death_year}</dd></div></dl>
-      <a class="weekly-cta" data-figure-link href={`${base}personatges/detall/?slug=${initialFigure.slug}`}>Llig la fitxa biogràfica <span aria-hidden="true">→</span></a>
+      <a class="weekly-cta" data-figure-link href={`${base}personatges/detall/?slug=${initialFigure.slug}`}>Llig la fitxa biogràfica</a>
     </article>
 
     <article class="weekly-card weekly-announcement">
@@ -57,11 +57,10 @@ const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth(
       <h3 data-announcement-title>{initialAnnouncement.title}</h3>
       <p data-announcement-description>{initialAnnouncement.description}</p>
       <dl class="weekly-meta"><div><dt>Any de la fitxa</dt><dd data-announcement-year>{initialAnnouncement.year}</dd></div><div><dt>Categoria</dt><dd data-announcement-category>{initialAnnouncement.category}</dd></div></dl>
-      <div class="weekly-actions"><a class="weekly-cta" href={`${base}activitats/`}>Explora l’arxiu <span aria-hidden="true">→</span></a><a class="weekly-video" data-announcement-link href={initialAnnouncement.youtubeUrl} target="_blank" rel="noopener noreferrer">Cerca aquesta referència a YouTube <span aria-hidden="true">↗</span><span class="sr-only"> (s’obri en una pestanya nova)</span></a></div>
+      <div class="weekly-actions"><a class="weekly-cta" href={`${base}activitats/`}>Explora l’arxiu</a><a class="weekly-video" data-announcement-link href={initialAnnouncement.youtubeUrl} target="_blank" rel="noopener noreferrer">Cerca aquesta referència a YouTube<span class="sr-only"> (s’obri en una pestanya nova)</span></a></div>
     </article>
   </div>
 
-  <nav class="weekly-links" aria-label="Continua la selecció setmanal"><a href={`${base}cataleg/`}>Catàleg complet <span aria-hidden="true">→</span></a><a href={`${base}personatges/`}>Tots els personatges <span aria-hidden="true">→</span></a><a href={`${base}activitats/`}>Activitats i anuncis <span aria-hidden="true">→</span></a></nav>
 </section>
 
 <script>
@@ -120,7 +119,7 @@ const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth(
 </script>
 
 <style>
-  .weekly-highlights { max-width:var(--max); margin:0 auto; padding:clamp(4.5rem,9vw,8rem) 1.25rem; }
+  .weekly-highlights { max-width:var(--max); margin:0 auto; padding:clamp(2.5rem,5vw,4.5rem) 1.25rem clamp(4.5rem,9vw,8rem); }
   .weekly-highlights-header { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(16rem,.85fr); gap:2rem; align-items:end; padding-bottom:2rem; border-bottom:1px solid var(--line); }
   .weekly-range { margin-bottom:.6rem; color:var(--muted); font:500 .75rem 'DM Mono',monospace; }
   .weekly-range time { color:var(--text); }
@@ -135,12 +134,10 @@ const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth(
   .weekly-meta { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin:auto 0 1.2rem; padding-top:1rem; border-top:1px solid var(--line); }
   .weekly-meta dt { color:var(--muted); font:500 .62rem 'DM Mono',monospace; text-transform:uppercase; letter-spacing:.06em; }
   .weekly-meta dd { margin:.2rem 0 0; font-size:.84rem; font-weight:600; }
-  .weekly-cta,.weekly-video { min-height:44px; display:inline-flex; align-items:center; gap:.45rem; font-weight:700; text-underline-offset:4px; }
+  .weekly-cta,.weekly-video { min-height:44px; display:inline-flex; align-items:center; padding-inline:.6rem; border:1px solid var(--line); color:inherit; font-weight:500; text-decoration:none; }
   .weekly-actions { display:grid; gap:.35rem; }
   .weekly-video { min-height:32px; font-size:.85rem; }
-  .weekly-cta:hover,.weekly-video:hover,.weekly-links a:hover { color:var(--accent); }
-  .weekly-links { display:flex; flex-wrap:wrap; gap:1.25rem 2rem; padding-top:1.25rem; border-bottom:1px solid var(--line); }
-  .weekly-links a { min-height:44px; display:inline-flex; align-items:center; gap:.45rem; font-weight:700; text-underline-offset:4px; }
+  .weekly-cta:hover,.weekly-video:hover { color:var(--accent); }
   .weekly-card :focus-visible { outline-offset:-3px; }
 
   @media (max-width:700px) { .weekly-highlights-header,.weekly-cards { grid-template-columns:1fr; }.weekly-highlights-header { align-items:start; }.weekly-card { min-height:0; }.weekly-number { margin-bottom:1.75rem; } }
