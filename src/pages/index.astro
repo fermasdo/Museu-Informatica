@@ -5,9 +5,102 @@ import WeeklyHighlights from '../components/WeeklyHighlights.astro';
 <Layout title="Museu d’Informàtica" description="Tecnologia amb memòria a l’IES l’Estació d’Ontinyent.">
   <section class="hero">
     <div class="hero-copy"><p class="eyebrow">IES L’ESTACIÓ · ONTINYENT</p><h1>La tecnologia té <em>memòria.</em></h1><p class="lead">Màquines, jocs, manuals i idees per llegir el passat tecnològic des del present.</p></div>
-    <figure class="hero-computer"><svg viewBox="0 0 800 600" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="600" fill="#0F1C14"/><g stroke="#B8C5BA" stroke-linejoin="round" stroke-width="10"><path fill="#16271C" d="M192 82h340l38 54v250l-38 42H192l-38-42V136z"/><path fill="#08110C" d="M216 124h292v218H216z"/><path fill="#16271C" d="M268 428h188l26 43H242z"/></g><rect x="235" y="143" width="254" height="180" fill="#08110C" stroke="#9EEA63" stroke-width="4"/><text x="260" y="220" fill="#9EEA63" font-family="monospace" font-size="42">READY</text><g fill="#B8C5BA"><path d="M117 472h371l72 69H149z"/><path d="M584 420h108l24 31v120H560V451z"/></g><g fill="#9EEA63"><rect x="602" y="483" width="72" height="6"/><rect x="602" y="498" width="40" height="6"/></g></svg><figcaption>Terminal preparat per recordar.</figcaption></figure>
+    <figure class="hero-computer"><canvas data-ascii-stream aria-hidden="true" tabindex="-1"></canvas><figcaption>Flux de terminal preparat per recordar.</figcaption></figure>
   </section>
   <WeeklyHighlights />
   <section class="pathways" aria-label="Continua explorant"><a href={`${import.meta.env.BASE_URL}recorreguts/`}><p class="eyebrow">RECORREGUTS</p><h2>Tria un fil per començar.</h2><span>Veure itineraris →</span></a><a href={`${import.meta.env.BASE_URL}laboratori/`}><p class="eyebrow">LABORATORI</p><h2>Experimenta amb programari històric.</h2><span>Obrir recursos →</span></a></section>
   <section class="participate"><p class="eyebrow">EL MUSEU EL FEM ENTRE TOTES</p><h2>Tens una màquina que encara conta coses?</h2><a class="button" href={`${import.meta.env.BASE_URL}col·labora/#donacions`}>Parlem-ne <span aria-hidden="true">→</span></a></section>
 </Layout>
+
+<script>
+  const canvas = document.querySelector<HTMLCanvasElement>('[data-ascii-stream]');
+
+  if (canvas) {
+    const context = canvas.getContext('2d');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const tokens = ['0', '1', '>', '_', 'LOAD', 'RUN', 'READY', 'BASIC', 'C:\\>', '.', ':', ';', '/', '*', '+', '-', '='];
+    let columns: { x: number; y: number; speed: number; token: string; opacity: number }[] = [];
+    let frameId = 0;
+    let lastFrame = 0;
+
+    const randomToken = () => tokens[Math.floor(Math.random() * tokens.length)];
+    const resize = () => {
+      if (!context) return;
+      const bounds = canvas.getBoundingClientRect();
+      const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.max(1, Math.round(bounds.width * ratio));
+      canvas.height = Math.max(1, Math.round(bounds.height * ratio));
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      const cell = bounds.width < 500 ? 28 : 22;
+      const total = Math.max(8, Math.floor(bounds.width / cell));
+      columns = Array.from({ length: total }, (_, index) => ({
+        x: (index + .5) * (bounds.width / total),
+        y: Math.random() * bounds.height,
+        speed: (bounds.height < 360 ? .32 : .42) + Math.random() * .42,
+        token: randomToken(),
+        opacity: .32 + Math.random() * .58
+      }));
+      draw(true);
+    };
+
+    const draw = (staticFrame = false) => {
+      if (!context) return;
+      const { width, height } = canvas.getBoundingClientRect();
+      context.clearRect(0, 0, width, height);
+      context.fillStyle = '#08110C';
+      context.fillRect(0, 0, width, height);
+      context.font = `${width < 500 ? 14 : 16}px "DM Mono", monospace`;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      columns.forEach((column, index) => {
+        const trail = staticFrame ? 4 : 5;
+        for (let step = trail; step >= 0; step -= 1) {
+          const y = column.y - step * 24;
+          if (y < -20 || y > height + 20) continue;
+          const alpha = (1 - step / (trail + 1)) * column.opacity;
+          context.fillStyle = step === 0 ? `rgba(158, 234, 99, ${alpha})` : `rgba(66, 96, 74, ${alpha * .82})`;
+          context.fillText(step === 0 ? column.token : randomToken(), column.x, y);
+        }
+        if (staticFrame && index % 3 === 0) {
+          context.fillStyle = 'rgba(184, 197, 186, .42)';
+          context.fillText(index % 2 ? '01' : 'C:\\>', column.x, column.y + 28);
+        }
+      });
+    };
+
+    const animate = (time: number) => {
+      if (document.hidden || reducedMotion.matches) return;
+      if (time - lastFrame >= 40) {
+        const { height } = canvas.getBoundingClientRect();
+        columns.forEach(column => {
+          column.y += column.speed * (time - lastFrame || 40);
+          if (column.y > height + 20) {
+            column.y = -20;
+            column.token = randomToken();
+            column.opacity = .32 + Math.random() * .58;
+          }
+        });
+        draw();
+        lastFrame = time;
+      }
+      frameId = requestAnimationFrame(animate);
+    };
+
+    const start = () => {
+      cancelAnimationFrame(frameId);
+      if (!document.hidden && !reducedMotion.matches) frameId = requestAnimationFrame(animate);
+    };
+
+    const stop = () => cancelAnimationFrame(frameId);
+    const visibilityChange = () => document.hidden ? stop() : start();
+
+    resize();
+    new ResizeObserver(resize).observe(canvas);
+    document.addEventListener('visibilitychange', visibilityChange);
+    reducedMotion.addEventListener('change', () => {
+      resize();
+      start();
+    });
+    start();
+  }
+</script>

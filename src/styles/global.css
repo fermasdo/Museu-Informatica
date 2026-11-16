@@ -254,6 +254,18 @@ select { color-scheme:dark; }
 .detail-visual,.detail-meta,.dashboard-list article,.photo-list article,.summary-card,.figure-management fieldset,.figure-sources-editor,.figure-image-editor { border-radius:var(--radius-monitor); }
 .detail-visual[data-gallery] figure { overflow:hidden; border-radius:calc(var(--radius-monitor) - .25rem); }
 
+/* Portada: panell CRT decoratiu confinat, amb contrast independent del text. */
+.hero-computer { overflow:hidden; border:1px solid var(--line); border-radius:var(--radius-monitor); background:var(--surface); box-shadow:inset 0 0 0 1px rgba(158,234,99,.08); }
+.hero-computer canvas { display:block; width:100%; aspect-ratio:4 / 3; background:var(--background); }
+.hero-computer figcaption { margin:.7rem .8rem .8rem; color:var(--muted); }
+@media (max-width:700px) { .hero-computer { max-width:440px; margin-inline:auto; } .hero .lead { color:var(--muted); } }
+
+/* Els enllaços i controls es diferencien per color, context i focus, no per subratllat. */
+a,.link-button,.account-text-button,.pathways span,nav a[aria-current="page"] { text-decoration:none; }
+
+/* L'accés es manté al menú de compte, sense duplicar-lo a Col·labora. */
+.collaboration-workspace--public .account-area { display:none!important; }
+
 /* Fitxa de catàleg: impressió autònoma en A4, sense afectar la fitxa de personatges. */
 @media print {
   @page { size:A4 portrait; margin:15mm; }

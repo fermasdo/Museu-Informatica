@@ -11,9 +11,9 @@ const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
     <header class="private-header">
       <a class="brand" href={import.meta.env.BASE_URL} aria-label="Museu d’Informàtica, inici"><svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 32V8h7l9 11 9-11h7v24h-7V18l-9 10-9-10v14z"/><path d="M9 5h22"/></svg><span>Museu<br /><b>d’Informàtica</b></span></a>
       <a class="return-link" href={import.meta.env.BASE_URL}>← Tornar al museu</a>
-      <details class="account-menu" data-private-account hidden><summary><span class="account-avatar" data-private-avatar aria-hidden="true">?</span><span data-private-name>Compte</span></summary><div class="account-menu-panel"><a href={href('/espai/')}>El meu espai</a><a href={href('/perfil/')}>Edita el perfil</a><button type="button" data-private-signout>Tanca sessió</button></div></details>
+      <details class="account-menu" data-private-account hidden><summary><span class="account-avatar" data-private-avatar aria-hidden="true">?</span><span data-private-name>Compte</span></summary><div class="account-menu-panel"><button type="button" data-private-signout>Tanca sessió</button></div></details>
     </header>
-    <nav class="private-nav" data-private-navigation aria-label="Navegació del compte" hidden><a href={href('/espai/')} aria-current={current === 'space' ? 'page' : undefined}>Espai</a><a href={href('/perfil/')} aria-current={current === 'profile' ? 'page' : undefined}>Perfil</a><a href={href('/gestio-cataleg/')} data-private-management hidden aria-current={current === 'manage' ? 'page' : undefined}>Gestió del catàleg</a></nav>
+    <nav class="private-nav" data-private-navigation aria-label="Navegació de gestió" hidden><a href={href('/espai/')} aria-current={current === 'space' ? 'page' : undefined}><span data-private-space-student>El meu espai</span><span data-private-space-management hidden>Resum administratiu</span></a><a href={href('/perfil/')} aria-current={current === 'profile' ? 'page' : undefined}>Perfil</a><a href={href('/gestio-persones/')} data-private-management hidden aria-current={current === 'usuaris' ? 'page' : undefined}>Usuaris</a><a href={href('/gestio-cataleg/')} data-private-management hidden aria-current={current === 'cataleg' ? 'page' : undefined}>Catàleg</a><a href={href('/gestio-personatges/')} data-private-management hidden aria-current={current === 'fitxes' ? 'page' : undefined}>Fitxes</a><a href={href('/gestio-donacions/')} data-private-management hidden aria-current={current === 'donacions' ? 'page' : undefined}>Donacions</a></nav>
     <main id="contingut-privat" data-private-content tabindex="-1" hidden><slot /></main>
     <p class="private-service-notice" data-private-service-notice hidden role="status"><span data-private-service-message></span> <a href={href('/col·labora/')}>Torna a l’accés</a></p>
     <script>
@@ -42,7 +42,10 @@ const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
              const { data, error } = await supabase.storage.from('profile-avatars').createSignedUrl(profile.avatar_path, 3600);
              if (!error && data?.signedUrl) { const image = new Image(40, 40); image.alt = ''; image.src = data.signedUrl; image.onload = () => avatar.replaceChildren(image); }
            }
-            document.querySelectorAll<HTMLElement>('[data-private-management]').forEach(link => link.hidden = !(profile?.role === 'teacher' || administrator === true));
+             const canManage = profile?.role === 'teacher' || administrator === true;
+             document.querySelectorAll<HTMLElement>('[data-private-management]').forEach(link => link.hidden = !canManage);
+             document.querySelector<HTMLElement>('[data-private-space-student]')!.hidden = canManage;
+             document.querySelector<HTMLElement>('[data-private-space-management]')!.hidden = !canManage;
             document.querySelector<HTMLElement>('[data-private-account]')!.hidden = false;
             document.querySelector<HTMLElement>('[data-private-navigation]')!.hidden = false;
             document.querySelector<HTMLElement>('[data-private-content]')!.hidden = false;

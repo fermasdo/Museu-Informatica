@@ -5,10 +5,10 @@ import { publicFigures } from '../../data/publicFigures';
 <Layout title="Fitxa de personatge">
   <section class="detail-page figure-detail" data-figure-detail aria-live="polite">
     <p class="no-print"><a class="back-link" href={`${import.meta.env.BASE_URL}personatges/`}>← Torna als personatges</a></p>
-    <p class="form-message no-print" data-message role="status"></p>
+    <p class="form-message no-print" data-message data-pdf-status role="status"></p>
     <article class="figure-sheet" data-sheet hidden>
       <header class="figure-sheet-header"><p class="eyebrow">MUSEU D’INFORMÀTICA · FITXA BIOGRÀFICA</p><p class="figure-sheet-code" data-slug></p></header>
-       <div class="figure-detail-hero"><div class="figure-portrait" data-portrait aria-hidden="true"></div><div><p class="eyebrow" data-meta></p><h1 data-name></h1><p class="lead" data-summary></p><div class="detail-actions no-print"><button class="print-detail" type="button" data-print aria-label="Genera PDF" title="Genera PDF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4V9h16v8h-2M6 14h12v7H6z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg><span>Genera PDF</span></button><span data-edit-action></span></div></div></div>
+       <div class="figure-detail-hero"><div class="figure-portrait" data-portrait aria-hidden="true"></div><div><p class="eyebrow" data-meta></p><h1 data-name></h1><p class="lead" data-summary></p><div class="detail-actions no-print"><button class="print-detail" type="button" data-print disabled aria-label="Genera PDF" title="Genera PDF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4V9h16v8h-2M6 14h12v7H6z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg><span>Genera PDF</span></button><span data-edit-action></span></div></div></div>
       <div class="figure-editorial"><section><h2>Trajectòria</h2><div data-biography></div></section><section data-contribution-section><h2>Una aportació clau</h2><div data-contribution></div></section></div>
       <section class="figure-sources" data-sources-section><h2>Fonts i lectura</h2><ol data-sources></ol></section>
       <footer class="figure-sheet-footer"><span>IES l’Estació · Museu d’Informàtica</span><span data-print-date></span></footer>
@@ -17,13 +17,16 @@ import { publicFigures } from '../../data/publicFigures';
   </section>
 </Layout>
 <script>
-  import { publicFigures } from '../../data/publicFigures';
-  import { supabase } from '../../lib/supabase';
+   import { publicFigures } from '../../data/publicFigures';
+   import { supabase } from '../../lib/supabase';
+   import { downloadPdf } from '../../lib/downloadPdf';
   document.documentElement.classList.add('js');
   type Figure = Record<string, any>;
   const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
   const slug = new URLSearchParams(location.search).get('slug') || decodeURIComponent(location.hash.slice(1));
-  const message = $('[data-message]');
+   const message = $('[data-message]');
+   const printButton = $('[data-print]') as HTMLButtonElement;
+   printButton.disabled = true;
   const value = (item: Figure, ...keys: string[]) => keys.map(key => item[key]).find(item => item !== null && item !== undefined && item !== '') || '';
   const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || '??';
    const addText = (target: HTMLElement, text: string) => text.split(/\n\s*\n/).filter(Boolean).forEach(part => { const paragraph = document.createElement('p'); paragraph.textContent = part; target.append(paragraph); });
@@ -48,11 +51,27 @@ import { publicFigures } from '../../data/publicFigures';
     const contribution = String(value(item, 'contribution', 'key_contribution'));
     const biographyTarget = $('[data-biography]'); const contributionTarget = $('[data-contribution]'); biographyTarget.replaceChildren(); contributionTarget.replaceChildren(); addText(biographyTarget, biography); addText(contributionTarget, contribution);
     const sources = value(item, 'sources', 'source_lines'); const sourceList = $('[data-sources]'); sourceList.replaceChildren(); if (Array.isArray(sources)) sources.forEach((source: any) => { const line = document.createElement('li'); const link = document.createElement('a'); link.href = String(source.url || ''); link.textContent = String(source.label || source.url || 'Font externa'); link.target = '_blank'; link.rel = 'noreferrer'; line.append(link); sourceList.append(line); });
-    $('[data-sources-section]').hidden = !sourceList.childElementCount; $('[data-contribution-section]').hidden = !contribution; $('[data-print-date]').textContent = new Intl.DateTimeFormat('ca-ES', { dateStyle: 'long' }).format(new Date()); $('[data-sheet]').hidden = false;
+     $('[data-sources-section]').hidden = !sourceList.childElementCount; $('[data-contribution-section]').hidden = !contribution; $('[data-print-date]').textContent = new Intl.DateTimeFormat('ca-ES', { dateStyle: 'long' }).format(new Date()); $('[data-sheet]').hidden = false; printButton.disabled = false;
   }
+   printButton.addEventListener('click', async () => {
+     const title = $('[data-name]').textContent?.trim() || 'fitxa-biografica';
+     printButton.disabled = true;
+     printButton.setAttribute('aria-busy', 'true');
+     message.classList.remove('is-error');
+     message.textContent = 'S’està generant el PDF…';
+     try {
+       await downloadPdf($('[data-sheet]'), title);
+       message.textContent = 'El PDF s’ha descarregat correctament.';
+     } catch {
+       message.classList.add('is-error');
+       message.textContent = 'No s’ha pogut generar el PDF. Torna-ho a provar.';
+     } finally {
+       printButton.disabled = false;
+       printButton.removeAttribute('aria-busy');
+     }
+   });
   const fallback = publicFigures.find((figure) => figure.slug === slug);
    if (!slug) message.textContent = 'Tria un personatge des de l’arxiu.';
   else if (!fallback && !supabase) message.textContent = 'Aquesta fitxa no existeix o encara no és pública.';
     else { if (fallback) render(fallback); if (!supabase) message.textContent = 'S’està mostrant la fitxa de referència mentre l’arxiu no està connectat.'; else { const { data, error } = await supabase.from('public_historical_figures').select('*').eq('slug', slug).maybeSingle(); if (error || !data) { if (fallback) message.textContent = 'S’està mostrant la fitxa de referència mentre l’arxiu no està disponible.'; else message.textContent = 'Aquesta fitxa no existeix o encara no és pública.'; } else { const item = data as Figure; if (item.image_path) { const { data: image } = await supabase.storage.from('historical-figure-images').createSignedUrl(item.image_path, 3600); item.resolved_image_url = image?.signedUrl || ''; } render(item); void addEditAction(String(item.id)); } } }
-  $('[data-print]').addEventListener('click', () => window.print());
 </script>

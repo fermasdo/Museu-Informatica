@@ -2,11 +2,11 @@
 import PrivateLayout from '../components/PrivateLayout.astro';
 import CollaborationWorkspace from '../components/CollaborationWorkspace.astro';
 ---
-<PrivateLayout title="Gestió del catàleg" current="manage"><CollaborationWorkspace mode="manage" managementSection="cataleg" /></PrivateLayout>
+<PrivateLayout title="Gestió del catàleg" current="cataleg"><CollaborationWorkspace mode="manage" managementSection="cataleg" /></PrivateLayout>
 <script is:inline define:vars={{ base: import.meta.env.BASE_URL }}>
   const params = new URLSearchParams(window.location.search);
   const section = params.get('section');
-  const routes = { usuaris: 'gestio-persones/', fitxes: 'gestio-personatges/', anuncis: 'gestio-anuncis/' };
+  const routes = { usuaris: 'gestio-persones/', fitxes: 'gestio-personatges/', anuncis: 'gestio-anuncis/', donacions: 'gestio-donacions/' };
   if (section && section in routes) {
     params.delete('section');
     window.location.replace(`${base}${routes[section]}${params.size ? `?${params}` : ''}${window.location.hash}`);
