@@ -18,7 +18,7 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}gestio-c
       <form data-new-password hidden><h3>Tria una contrasenya nova</h3><label>Contrasenya nova<input name="password" type="password" autocomplete="new-password" minlength="8" required /></label><button class="button" type="submit">Actualitzar contrasenya</button></form>
     </div>
     <section class="dashboard" data-dashboard hidden aria-labelledby={mode === 'manage' ? undefined : 'dashboard-title'}>
-      {mode !== 'manage' && <div class="dashboard-header"><div><p class="eyebrow">EL MEU ESPAI</p><h2 id="dashboard-title">Hola, <span data-profile-name></span></h2><p data-profile-summary></p></div>{mode !== 'public' && <button class="button button-quiet" type="button" data-signout>Tancar sessió</button>}</div>}
+      {mode !== 'manage' && <div class="dashboard-header"><div><p class="eyebrow">EL MEU ESPAI</p><h2 id="dashboard-title">Hola, <span data-profile-name></span></h2><p data-profile-summary></p></div></div>}
       <div id="perfil" class="profile-card" tabindex="-1"><p class="eyebrow">PERFIL</p><dl><div><dt>Correu</dt><dd data-profile-email></dd></div><div><dt>Rol efectiu</dt><dd data-profile-role></dd></div><div><dt>Sol·licitud</dt><dd data-profile-requested-role></dd></div><div><dt>Estat</dt><dd data-profile-approval></dd></div></dl><form class="data-form profile-form" data-profile-form><div class="profile-avatar-preview" data-profile-avatar aria-hidden="true">?</div><label>Nom per mostrar<input name="display_name" autocomplete="name" minlength="2" maxlength="100" required /></label><label>Imatge de perfil <span class="sr-only">(opcional)</span><input name="avatar" type="file" accept="image/jpeg,image/png,image/webp" /></label><p class="form-note">JPEG, PNG o WebP; màxim 2 MB. Pots canviar-la o suprimir-la quan vulgues.</p><label class="check"><input name="remove_avatar" type="checkbox" /> <span>Suprimeix la imatge actual</span></label><button class="small-button" type="submit">Desar perfil</button></form><p class="form-note">La sol·licitud de col·laboració no concedeix permisos per si mateixa; cal que siga validada.</p></div>
       <div data-student-dashboard hidden>
         <div class="dashboard-section"><div><p class="eyebrow">LES MEUES FITXES</p><h3>Inventari en curs</h3></div><div data-own-objects class="dashboard-list"></div></div>
@@ -175,7 +175,8 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}gestio-c
       let teacherTypes: CatalogueOption[] = [], teacherCabinets: CatalogueOption[] = [], studentTypes: CatalogueOption[] = [], studentCabinets: CatalogueOption[] = [], tags: Tag[] = [], profileRows: Profile[] = [], donationRows: any[] = [], activeTeacher = false, activeAdministrator = false;
        const reviewPageSize = 20;
         const reviewStatuses = ['pending_review', 'draft', 'published', 'archived'];
-        const reviewStatusFilters = ['all', ...reviewStatuses];
+       const reviewStatusFilters = ['all', ...reviewStatuses];
+       const requestedCatalogueObjectId = mode === 'manage' && clientManagementSection === 'cataleg' ? new URLSearchParams(window.location.search).get('id') : null;
        let reviewRequest = 0;
        type BulkReviewObject = { id: string; title: string; status: string };
        const selectedReviewObjects = new Map<string, BulkReviewObject>();
@@ -256,10 +257,13 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}gestio-c
       syncReviewControls(state);
       const first = (state.page - 1) * reviewPageSize;
        let query = supabase.from('catalog_objects').select('id, inventory_code, title, description, manufacturer, model, object_type_id, cabinet_id, production_year_start, production_year_end, ownership, information_url, video_url, status, updated_at, donors(display_name)', { count: 'exact' }).order('updated_at', { ascending: false }).order('id', { ascending: false });
-       if (state.status !== 'all') query = query.eq('status', state.status);
-      if (state.type) query = query.eq('object_type_id', state.type);
-      const term = safeSearchTerm(state.q);
-       if (term) { const pattern = `%${term}%`; query = query.or(`title.ilike.${pattern},inventory_code.ilike.${pattern},manufacturer.ilike.${pattern},model.ilike.${pattern}`); }
+        if (requestedCatalogueObjectId) query = query.eq('id', requestedCatalogueObjectId);
+        else {
+          if (state.status !== 'all') query = query.eq('status', state.status);
+          if (state.type) query = query.eq('object_type_id', state.type);
+          const term = safeSearchTerm(state.q);
+          if (term) { const pattern = `%${term}%`; query = query.or(`title.ilike.${pattern},inventory_code.ilike.${pattern},manufacturer.ilike.${pattern},model.ilike.${pattern}`); }
+        }
        const result = await query.range(first, first + reviewPageSize - 1);
        if (requestId !== reviewRequest) return;
        const total = result.count || 0;
@@ -271,8 +275,20 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}gestio-c
        const photos = objectIds.length ? await supabase.from('object_photos').select('id, object_id, storage_path, alt_text, caption, position, created_at').in('object_id', objectIds).order('position') : { data: [] as ObjectPhoto[] };
        if (requestId !== reviewRequest) return;
          reviewObjectIdentifiers.clear(); result.data.forEach(row => reviewObjectIdentifiers.set(String(row.inventory_code), row.id));
-          renderReviewObjects(result.data, photos.data || []);
-          syncBulkActions(result.data);
+           renderReviewObjects(result.data, photos.data || []);
+           if (requestedCatalogueObjectId) {
+             const item = document.querySelector<HTMLElement>(`[data-review-objects] [data-object-id="${CSS.escape(requestedCatalogueObjectId)}"]`);
+             const editor = item?.querySelector<HTMLDetailsElement>('.object-editor');
+             const form = editor?.querySelector<HTMLFormElement>('[data-object-edit-form]');
+             if (editor && form) {
+               editor.open = true;
+               requestAnimationFrame(() => {
+                 form.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+                 (form.elements.namedItem('title') as HTMLElement | null)?.focus({ preventScroll: true });
+               });
+             }
+           }
+           syncBulkActions(result.data);
       const shownFrom = total ? first + 1 : 0, shownTo = Math.min(first + result.data.length, total);
        summary.textContent = total ? `Mostrant les fitxes ${shownFrom}–${shownTo} de ${total}.` : state.status === 'pending_review' && !state.q && !state.type ? 'La cua de revisió està al dia: no hi ha fitxes pendents.' : state.status === 'pending_review' && (state.q || state.type) ? 'No hi ha coincidències entre les fitxes pendents de revisió per a la cerca o tipologia indicades.' : 'No hi ha fitxes que coincidisquen amb la cerca i els filtres.';
        if (!total && state.status === 'pending_review' && !state.q && !state.type) { const button = document.createElement('button'); button.type = 'button'; button.className = 'link-button'; button.textContent = 'Veure totes les fitxes'; button.dataset.reviewShowAll = ''; button.onclick = () => { if (selectedReviewObjects.size) clearReviewSelection('La selecció s’ha netejat perquè han canviat els criteris de cerca o filtre.'); setReviewUrl({ q: '', status: 'all', type: '', page: 1 }, 'push'); void loadReviewObjects(); }; summary.after(button); }
@@ -565,7 +581,6 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}gestio-c
    document.querySelector<HTMLButtonElement>('[data-show-reset]')?.addEventListener('click', () => { const login = document.querySelector<HTMLElement>('[data-login]'); const reset = document.querySelector<HTMLElement>('[data-reset]'); if (login && reset) { login.hidden = true; reset.hidden = false; } }); document.querySelector<HTMLButtonElement>('[data-hide-reset]')?.addEventListener('click', () => { const login = document.querySelector<HTMLElement>('[data-login]'); const reset = document.querySelector<HTMLElement>('[data-reset]'); if (login && reset) { login.hidden = false; reset.hidden = true; } });
    document.querySelector<HTMLFormElement>('[data-reset]')?.addEventListener('submit', async event => { event.preventDefault(); if (!supabase) return; const form = event.currentTarget as HTMLFormElement; if (!form.reportValidity()) return; const email = String(new FormData(form).get('email')).trim(); const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}col·labora/` }); setMessage(error ? 'No s’ha pogut enviar l’enllaç ara mateix. Torna-ho a provar més tard.' : 'Si el compte existeix, rebràs un enllaç per restablir la contrasenya.', !!error); });
    $('[data-new-password]').addEventListener('submit', async event => { event.preventDefault(); if (!supabase) return; const password = String(new FormData(event.currentTarget as HTMLFormElement).get('password')); const { error } = await supabase.auth.updateUser({ password }); if (error) setMessage(error.message, true); else { setMessage('Contrasenya actualitzada. Ja pots iniciar sessió.'); (event.currentTarget as HTMLFormElement).hidden = true; const login = document.querySelector<HTMLElement>('[data-login]'); if (login) login.hidden = false; } });
-    document.querySelector<HTMLButtonElement>('[data-signout]')?.addEventListener('click', async () => { if (!supabase) return; await supabase.auth.signOut(); dashboard.hidden = true; authArea.hidden = false; setMessage('Sessió tancada.'); });
     document.querySelectorAll<HTMLInputElement>('input[name="status"][value="published"]').forEach(input => input.closest('label')?.remove());
        const reviewFilter = document.querySelector<HTMLSelectElement>('[data-review-filter]');
        reviewFilter?.querySelector('option[value=""]')?.setAttribute('value', 'all');
