@@ -1,11 +1,11 @@
 ---
 import FigureManagement from './FigureManagement.astro';
-const { mode = 'public' } = Astro.props;
-const requestedManagementSection = Astro.url.searchParams.get('section');
-const managementSection = ['cataleg', 'usuaris', 'fitxes', 'anuncis'].includes(requestedManagementSection || '') ? requestedManagementSection! : 'cataleg';
-const managementHref = (section: string) => `${import.meta.env.BASE_URL}gestio-cataleg/?section=${section}`;
+const { mode = 'public', managementSection: requestedManagementSection = 'cataleg' } = Astro.props;
+const managementSection = ['cataleg', 'usuaris', 'fitxes', 'anuncis'].includes(requestedManagementSection) ? requestedManagementSection : 'cataleg';
+const managementPaths: Record<string, string> = { cataleg: 'gestio-cataleg/', usuaris: 'gestio-persones/', fitxes: 'gestio-personatges/', anuncis: 'gestio-anuncis/' };
+const managementHref = (section: string) => `${import.meta.env.BASE_URL}${managementPaths[section]}`;
 ---
-<div class={`collaboration-workspace collaboration-workspace--${mode}`} data-workspace-mode={mode}>
+<div class={`collaboration-workspace collaboration-workspace--${mode}`} data-workspace-mode={mode} data-management-section-current={managementSection}>
   <section class="page-intro"><p class="eyebrow">COL·LABORACIÓ</p><h1>Un museu<br /><em>compartit.</em></h1><p class="lead">Accedeix al teu espai per inventariar, revisar i aportar context a la col·lecció.</p></section>
   <section class="account-area" aria-labelledby="access-title">
     <div class="section-heading"><div><p class="eyebrow">ESPAI DE GESTIÓ</p><h2 id="access-title">Accés al projecte</h2></div></div>
@@ -31,10 +31,10 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}gestio-c
         <section class="dashboard-summary" aria-labelledby="admin-summary-title">
           <div class="dashboard-summary-heading"><div><p class="eyebrow" data-teacher-summary-label>GESTIÓ</p><h3 id="admin-summary-title">Resum administratiu</h3></div><p>Accés ràpid a les tasques que requereixen atenció.</p></div>
           <div class="dashboard-summary-grid">
-            <a class="summary-card" href={`${managementHref('cataleg')}&status=pending_review`}><span>Fitxes pendents</span><strong data-summary-count="pending_review">Carregant…</strong><small>Obri la gestió de fitxes pendents</small></a>
-            <a class="summary-card" href={mode === 'space' ? '#gestio-donacions' : `${managementHref('cataleg')}&donations=open`} data-summary-donation-filter={mode === 'space' ? 'open' : undefined}><span>Donacions obertes</span><strong data-summary-count="donations">Carregant…</strong><small>Filtra les propostes noves i contactades</small></a>
-            <a class="summary-card" href={mode === 'space' ? '#gestio-perfils' : `${managementHref('usuaris')}&profile=pending`} data-summary-profile-filter={mode === 'space' ? 'pending' : undefined}><span data-summary-users-label>Usuaris pendents</span><strong data-summary-count="profiles">Carregant…</strong><small>Filtra els perfils pendents d’aprovació</small></a>
-            <a class="summary-card" href={`${managementHref('cataleg')}&status=archived`}><span>Fitxes arxivades</span><strong data-summary-count="archived">Carregant…</strong><small>Obri la gestió de fitxes arxivades</small></a>
+            <a class="summary-card" href={`${managementHref('cataleg')}?status=pending_review`}><span>Fitxes pendents</span><strong data-summary-count="pending_review">Carregant…</strong><small>Obri la gestió de fitxes pendents</small></a>
+            <a class="summary-card" href={mode === 'space' ? '#gestio-donacions' : `${managementHref('cataleg')}?donations=open`} data-summary-donation-filter={mode === 'space' ? 'open' : undefined}><span>Donacions obertes</span><strong data-summary-count="donations">Carregant…</strong><small>Filtra les propostes noves i contactades</small></a>
+            <a class="summary-card" href={mode === 'space' ? '#gestio-perfils' : `${managementHref('usuaris')}?profile=pending`} data-summary-profile-filter={mode === 'space' ? 'pending' : undefined}><span data-summary-users-label>Usuaris pendents</span><strong data-summary-count="profiles">Carregant…</strong><small>Filtra els perfils pendents d’aprovació</small></a>
+            <a class="summary-card" href={`${managementHref('cataleg')}?status=archived`}><span>Fitxes arxivades</span><strong data-summary-count="archived">Carregant…</strong><small>Obri la gestió de fitxes arxivades</small></a>
           </div>
           <p class="sr-only" data-summary-status role="status" aria-live="polite"></p>
         </section>
@@ -89,15 +89,7 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}gestio-c
 <script>
    import { supabase } from '../lib/supabase';
    const mode = document.querySelector<HTMLElement>('[data-workspace-mode]')?.dataset.workspaceMode || 'public';
-   const managementSections = ['cataleg', 'usuaris', 'fitxes', 'anuncis'];
-   const clientManagementSection = new URLSearchParams(window.location.search).get('section') || 'cataleg';
-   if (mode === 'manage' && managementSections.includes(clientManagementSection)) {
-     document.querySelectorAll<HTMLElement>('[data-management-section]').forEach(section => section.hidden = section.dataset.managementSection !== clientManagementSection);
-     document.querySelectorAll<HTMLAnchorElement>('.management-sections a').forEach(link => {
-       const active = new URL(link.href).searchParams.get('section') === clientManagementSection;
-       if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
-     });
-   }
+    const clientManagementSection = document.querySelector<HTMLElement>('[data-workspace-mode]')?.dataset.managementSectionCurrent || 'cataleg';
    const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
   let donationCaptchaToken = '';
   type Profile = { id: string; display_name: string; avatar_path?: string | null; role: 'visitor' | 'student' | 'teacher'; requested_role: 'student' | 'teacher' | null; approval_status: string };
@@ -191,7 +183,6 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}gestio-c
        const setReviewUrl = (state: ReviewState, navigation: 'replace' | 'push' = 'replace') => {
          const url = new URL(window.location.href);
          url.search = '';
-         if (mode === 'manage') url.searchParams.set('section', 'cataleg');
          if (state.q) url.searchParams.set('q', state.q);
         if (state.status) url.searchParams.set('status', state.status);
         if (state.type) url.searchParams.set('type', state.type);
@@ -605,7 +596,6 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}gestio-c
       const setManagementFilterUrl = (name: 'profile' | 'donations', value: string) => {
         if (mode !== 'manage') return;
         const url = new URL(window.location.href);
-        url.searchParams.set('section', name === 'profile' ? 'usuaris' : 'cataleg');
         if (value) url.searchParams.set(name, value); else url.searchParams.delete(name);
         window.history.replaceState({}, '', url);
       };

@@ -4,7 +4,7 @@ import Layout from '../../components/Layout.astro';
 <Layout title="Fitxa de catàleg">
     <section class="detail-page" data-detail aria-live="polite">
       <p class="print-date" data-print-date></p>
-      <div class="detail-hero"><div class="detail-visual" data-detail-photos><p class="photo-fallback">Fotografia pendent</p></div><div><p class="eyebrow">CATÀLEG <span data-year></span></p><h1 data-title>Carregant la <em>fitxa.</em></h1><p class="lead" data-description></p><div class="detail-hashtags" data-detail-tags aria-label="Etiquetes"></div><div class="detail-actions no-print"><button class="print-detail" type="button" data-print disabled aria-label="Imprimeix aquesta fitxa" title="Imprimeix aquesta fitxa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4V9h16v8h-2M6 14h12v7H6z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg></button><span data-edit-action></span></div></div></div>
+      <div class="detail-hero"><div class="detail-visual" data-detail-photos><p class="photo-fallback">Fotografia pendent</p></div><div><p class="eyebrow">CATÀLEG <span data-year></span></p><h1 data-title>Carregant la <em>fitxa.</em></h1><p class="lead" data-description></p><div class="detail-hashtags" data-detail-tags aria-label="Etiquetes"></div><div class="detail-actions no-print"><button class="print-detail" type="button" data-print disabled aria-label="Genera PDF" title="Genera PDF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4V9h16v8h-2M6 14h12v7H6z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg><span>Genera PDF</span></button><span data-edit-action></span></div></div></div>
    <p class="form-message" data-detail-message role="status"></p><section class="detail-story" data-story hidden><h2>Per què és important?</h2><p data-importance></p><div data-history hidden><h2>Història i ús</h2><p data-history-text></p></div></section><section data-meta-section hidden><h2>Metadades</h2><dl data-detail-meta class="detail-meta"></dl></section><noscript><p class="config-notice">Aquesta fitxa necessita JavaScript per consultar el catàleg en temps real. Torna al <a href={`${import.meta.env.BASE_URL}cataleg/`}>catàleg</a>.</p></noscript>
   </section>
 </Layout>
@@ -29,7 +29,7 @@ import Layout from '../../components/Layout.astro';
         if (profileError || administratorError || (profile?.role !== 'teacher' && isAdministrator !== true)) return;
         const link = document.createElement('a');
         link.className = 'detail-icon-button';
-        link.href = `${import.meta.env.BASE_URL}gestio-cataleg/?section=cataleg&status=all&id=${encodeURIComponent(pieceId)}`;
+        link.href = `${import.meta.env.BASE_URL}gestio-cataleg/?status=all&id=${encodeURIComponent(pieceId)}`;
         link.setAttribute('aria-label', 'Edita aquesta peça al gestor de catàleg');
         link.title = 'Edita aquesta peça al gestor de catàleg';
         link.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L19 8.5 15.5 5 4 16.5ZM14.5 6l3.5 3.5M4 20h16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>';
