@@ -247,7 +247,6 @@ select { color-scheme:dark; }
 .print-detail:hover { background:var(--active); color:var(--text); }
 .print-detail svg { width:1.25rem; height:1.25rem; }
 .print-detail:disabled { cursor:not-allowed; opacity:.55; }
-.print-date { display:none; }
 .detail-visual { overflow:hidden; }
 
 /* Curvatura reservada a contenidors i superfícies, mai a controls de formulari. */
@@ -271,7 +270,6 @@ a,.link-button,.account-text-button,.pathways span,nav a[aria-current="page"] { 
   @page { size:A4 portrait; margin:15mm; }
   .detail-page .no-print,.detail-page .form-message { display:none!important; }
   .detail-page { max-width:none!important; margin:0!important; padding:0!important; color:#111!important; }
-  .detail-page .print-date { display:block; margin:0 0 5mm; color:#333!important; font:9pt 'DM Mono',monospace; }
   .detail-page .detail-hero { grid-template-columns:72mm minmax(0,1fr); gap:9mm; margin:0; }
   .detail-page .detail-visual,.detail-page .detail-meta,.detail-page .detail-meta div { border-color:#555!important; background:#fff!important; color:#111!important; }
   .detail-page .detail-visual { break-inside:avoid; }

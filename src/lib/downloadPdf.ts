@@ -33,7 +33,7 @@ export const downloadPdf = async (element: HTMLElement, title: string) => {
   let canvas: HTMLCanvasElement;
   try {
     canvas = await html2canvas(element, {
-      backgroundColor: '#08110C',
+      backgroundColor: '#ffffff',
       scale: Math.min(window.devicePixelRatio || 1, 2),
       useCORS: true,
       logging: false,
@@ -45,21 +45,34 @@ export const downloadPdf = async (element: HTMLElement, title: string) => {
             width: 718px !important;
             max-width: none !important;
             margin: 0 !important;
-            padding: 24px !important;
-            background: #08110C !important;
-            color: #F1F7EF !important;
+            padding: 6px !important;
+            background: #ffffff !important;
+            color: #111111 !important;
             font-size: 16px !important;
             line-height: 1.45 !important;
           }
+          [data-pdf-export] h1,
+          [data-pdf-export] h2,
+          [data-pdf-export] h3,
           [data-pdf-export] .lead,
           [data-pdf-export] .detail-story p,
           [data-pdf-export] .detail-meta dd,
           [data-pdf-export] .figure-editorial section > div,
-          [data-pdf-export] .figure-sources { color: #F1F7EF !important; }
+          [data-pdf-export] .figure-sources { color: #111111 !important; }
+          [data-pdf-export] em { color: #315a3a !important; }
           [data-pdf-export] .eyebrow,
           [data-pdf-export] .detail-meta dt,
           [data-pdf-export] .figure-sheet-header,
-          [data-pdf-export] .figure-sheet-footer { color: #B8C5BA !important; }
+          [data-pdf-export] .figure-sheet-footer { color: #315a3a !important; }
+          [data-pdf-export] .detail-visual,
+          [data-pdf-export] .detail-visual img,
+          [data-pdf-export] .detail-visual[data-gallery] img,
+          [data-pdf-export] .figure-portrait,
+          [data-pdf-export] .detail-meta div {
+            background: #f3f5f2 !important;
+            border-color: #667068 !important;
+          }
+          [data-pdf-export] .hashtag { background: #f3f5f2 !important; color: #315a3a !important; }
           [data-pdf-export] .detail-hero { grid-template-columns: 280px minmax(0, 1fr) !important; gap: 28px !important; margin-top: 0 !important; }
           [data-pdf-export] .detail-hero h1,
           [data-pdf-export] .figure-detail h1 { font-size: 42px !important; }
@@ -104,8 +117,8 @@ export const downloadPdf = async (element: HTMLElement, title: string) => {
   const scale = Math.min(contentWidth / canvas.width, contentHeight / canvas.height);
   const imageWidth = canvas.width * scale;
   const imageHeight = canvas.height * scale;
-  const x = (pageWidth - imageWidth) / 2;
-  const y = (pageHeight - imageHeight) / 2;
+   const x = (pageWidth - imageWidth) / 2;
+   const y = margin;
   pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, imageWidth, imageHeight, undefined, 'FAST');
 
   pdf.save(`${safeFilename(title)}.pdf`);
