@@ -94,7 +94,7 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}${manage
   type Profile = { id: string; display_name: string; avatar_path?: string | null; role: 'visitor' | 'student' | 'teacher'; requested_role: 'student' | 'teacher' | null; approval_status: string };
   type Tag = { id: string; name: string; normalized_name: string };
    const message = document.querySelector<HTMLElement>('[data-message]');
-   const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
+   const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector) ?? document.createElement('div') as unknown as T;
    const setMessage = (text: string, error = false) => { if (message) { message.textContent = text; message.classList.toggle('is-error', error); } };
     const human = (value: string) => ({ visitor: 'Visitant', student: 'Alumne/a', teacher: 'Professor/a', not_required: 'No cal aprovació', pending: 'Pendent', approved: 'Aprovat', rejected: 'Rebutjat', draft: 'Esborrany', pending_review: 'Pendent de revisió', open: 'Oberta', accepted: 'Acceptada', implemented: 'Implementada', archived: 'Arxivada', published: 'Publicada', new: 'Nova', contacted: 'Contactada', closed: 'Tancada', spam: 'Correu brossa' }[value] || value);
   const authArea = $('[data-auth-area]'), dashboard = $('[data-dashboard]');
