@@ -31,9 +31,9 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}${manage
         <section class="dashboard-summary" aria-labelledby="admin-summary-title">
           <div class="dashboard-summary-heading"><div><p class="eyebrow" data-teacher-summary-label>GESTIÓ</p><h3 id="admin-summary-title">Resum administratiu</h3></div><p>Accés ràpid a les tasques que requereixen atenció.</p></div>
           <div class="dashboard-summary-grid">
-            <a class="summary-card" href={`${managementHref('cataleg')}?status=pending_review`}><span>Fitxes pendents</span><strong data-summary-count="pending_review">Carregant…</strong><small>Obri la gestió de fitxes pendents</small></a>
-            <a class="summary-card" href={`${managementHref('donacions')}?donations=open`}><span>Donacions obertes</span><strong data-summary-count="donations">Carregant…</strong><small>Filtra les propostes noves i contactades</small></a>
-            <a class="summary-card" href={mode === 'space' ? '#gestio-perfils' : `${managementHref('usuaris')}?profile=pending`} data-summary-profile-filter={mode === 'space' ? 'pending' : undefined}><span data-summary-users-label>Usuaris pendents</span><strong data-summary-count="profiles">Carregant…</strong><small>Filtra els perfils pendents d’aprovació</small></a>
+            <a class="summary-card" href={`${managementHref('cataleg')}?status=pending_review`} data-summary-actionable="pending_review"><span>Fitxes pendents</span><strong data-summary-count="pending_review">Carregant…</strong><small>Obri la gestió de fitxes pendents</small></a>
+            <a class="summary-card" href={`${managementHref('donacions')}?donations=open`} data-summary-actionable="donations"><span>Donacions obertes</span><strong data-summary-count="donations">Carregant…</strong><small>Filtra les propostes noves i contactades</small></a>
+            <a class="summary-card" href={mode === 'space' ? '#gestio-perfils' : `${managementHref('usuaris')}?profile=pending`} data-summary-actionable="profiles" data-summary-profile-filter={mode === 'space' ? 'pending' : undefined}><span data-summary-users-label>Usuaris pendents</span><strong data-summary-count="profiles">Carregant…</strong><small>Filtra els perfils pendents d’aprovació</small></a>
             <a class="summary-card" href={`${managementHref('cataleg')}?status=archived`}><span>Fitxes arxivades</span><strong data-summary-count="archived">Carregant…</strong><small>Obri la gestió de fitxes arxivades</small></a>
           </div>
           <p class="sr-only" data-summary-status role="status" aria-live="polite"></p>
@@ -60,7 +60,7 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}${manage
 </template>
 
 <template data-photo-manager-template>
-  <details class="object-editor photo-manager"><summary>Gestionar fotografies</summary><div class="photo-manager-content"><form class="data-form" data-photo-form><label>Fitxer (JPEG, PNG o WebP; màxim 10 MiB)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required /></label><label>Text alternatiu<input name="alt_text" minlength="4" maxlength="250" required /></label><label>Peu de foto <span class="sr-only">(opcional)</span><textarea name="caption" rows="2" maxlength="500"></textarea></label><button class="small-button" type="submit">Pujar fotografia</button></form><div class="photo-list" data-photo-list></div></div></details>
+  <details class="object-editor photo-manager"><summary>Gestionar fotografies</summary><div class="photo-manager-content"><form class="data-form" data-photo-form><label>Fitxer (JPEG, PNG o WebP; màxim 10 MiB)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required /></label><button class="small-button" type="submit">Pujar fotografia</button></form><div class="photo-list" data-photo-list></div></div></details>
 </template>
 
   <template data-return-to-draft-template>
@@ -217,7 +217,8 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}${manage
        const profileFilter = document.querySelector<HTMLSelectElement>('[data-profile-filter]');
        profileFilter?.querySelector<HTMLOptionElement>('[data-admin-profile-filter]')?.toggleAttribute('hidden', !isAdministrator);
        if (profileFilter) { profileFilter.options[0].text = isAdministrator ? 'Tots els perfils' : 'Tot l’alumnat'; if (!isAdministrator && profileFilter.value === 'teacher') profileFilter.value = ''; }
-       document.querySelectorAll<HTMLElement>('[data-summary-count]').forEach(count => count.textContent = 'Carregant…');
+        document.querySelectorAll<HTMLElement>('[data-summary-count]').forEach(count => count.textContent = 'Carregant…');
+        document.querySelectorAll<HTMLElement>('[data-summary-actionable]').forEach(card => card.removeAttribute('data-summary-attention'));
        $('[data-teacher-summary-label]').textContent = isAdministrator ? 'ADMINISTRACIÓ · GESTIÓ GLOBAL' : 'DOCÈNCIA · REVISIÓ DE COL·LABORACIONS';
        $('[data-summary-users-label]').textContent = isAdministrator ? 'Usuaris pendents' : 'Alumnat pendent';
        const summaryCounts = Promise.all([
@@ -238,10 +239,12 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}${manage
           canManageCatalogue ? supabase.from('donation_contacts').select('id, name, email, phone, message, status, created_at').order('created_at', { ascending: false }) : Promise.resolve({ data: [], error: null })
      ]);
         const [pendingReviewCount, donationCount, profileCount, archivedCount] = await summaryCounts;
-         ([['pending_review', pendingReviewCount], ['donations', donationCount], ['profiles', profileCount], ['archived', archivedCount]] as const).forEach(([key, result]) => {
-           const target = document.querySelector<HTMLElement>(`[data-summary-count="${key}"]`);
-           if (target) target.textContent = result.error || result.count === null ? 'No disponible' : String(result.count);
-         });
+          ([['pending_review', pendingReviewCount], ['donations', donationCount], ['profiles', profileCount], ['archived', archivedCount]] as const).forEach(([key, result]) => {
+            const target = document.querySelector<HTMLElement>(`[data-summary-count="${key}"]`);
+            if (target) target.textContent = result.error || result.count === null ? 'No disponible' : String(result.count);
+            const card = document.querySelector<HTMLElement>(`[data-summary-actionable="${key}"]`);
+            card?.toggleAttribute('data-summary-attention', !result.error && (result.count || 0) > 0);
+          });
          $('[data-summary-status]').textContent = 'Resum administratiu actualitzat.';
         teacherTypes = types.data || []; teacherCabinets = cabinets.data || []; await loadTags(); renderTagPickers();
         const videoResult = canManageCatalogue ? await supabase.from('video_proposals').select('id, title, era, category, video_url, status').order('created_at', { ascending: false }).limit(50) : { data: [] as any[] };
@@ -560,39 +563,43 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}${manage
    async function updateVideoProposal(id: string, status: 'approved' | 'rejected') { if (!supabase) return; const { error } = await supabase.from('video_proposals').update({ status }).eq('id', id); setMessage(error ? error.message : `Anunci ${status === 'approved' ? 'aprovat' : 'rebutjat'}.`, !!error); if (!error) await refreshTeacherCatalogue(); }
       async function saveObjectChanges(event: Event, id: string) { event.preventDefault(); const form = event.currentTarget as HTMLFormElement; const { object, error } = await saveCatalogueObject(form, id); if (!error && object) { try { await saveObjectTags(object.id, form); } catch (tagError) { setMessage(`Les dades s’han desat, però no les etiquetes: ${tagError instanceof Error ? tagError.message : 'error desconegut'}`, true); return; } } setMessage(error ? error.message : 'Dades bàsiques i etiquetes actualitzades.', !!error); if (!error) await refreshTeacherCatalogue(); }
       async function saveStudentObjectChanges(event: Event, id: string, userId: string) { event.preventDefault(); const form = event.currentTarget as HTMLFormElement; const { object, error } = await saveCatalogueObject(form, id, true); if (!error && object) { try { await saveObjectTags(object.id, form); } catch (tagError) { setMessage(`L’esborrany s’ha desat, però no les etiquetes: ${tagError instanceof Error ? tagError.message : 'error desconegut'}`, true); return; } } setMessage(error ? error.message : 'Esborrany i etiquetes actualitzats.', !!error); if (!error) await loadStudent(userId); }
-    async function uploadPhoto(event: Event, objectId: string, photos: ObjectPhoto[]) {
+     async function uploadPhoto(event: Event, objectId: string, photos: ObjectPhoto[]) {
      event.preventDefault();
      if (!supabase || !activeTeacher) return;
      const form = event.currentTarget as HTMLFormElement;
      const data = new FormData(form);
      const file = data.get('photo');
-     const altText = String(data.get('alt_text')).trim();
-     const caption = String(data.get('caption')).trim() || null;
      const extension = file instanceof File ? ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' } as Record<string, string>)[file.type] : undefined;
      if (!(file instanceof File) || !extension || file.size > 10 * 1024 * 1024) { setMessage('Selecciona una imatge JPEG, PNG o WebP de menys de 10 MiB.', true); return; }
-     if (altText.length < 4 || altText.length > 250) { setMessage('El text alternatiu ha de tindre entre 4 i 250 caràcters.', true); return; }
      const position = photos.reduce((maximum, photo) => Math.max(maximum, photo.position ?? -1), -1) + 1;
      if (position > 100) { setMessage('Aquesta peça ja ha arribat al màxim de 101 fotografies.', true); return; }
-     const { data: { user } } = await supabase.auth.getUser();
-     if (!user) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: object, error: objectError } = await supabase.from('catalog_objects').select('title').eq('id', objectId).single();
+       const title = object?.title.trim() || '';
+       if (objectError || !title) { setMessage('No s’ha pogut obtenir el títol de la fitxa per pujar la fotografia.', true); return; }
+       const altText = `Fotografia de ${title}`;
      const storagePath = `${user.id}/${crypto.randomUUID()}.${extension}`;
      const { error: uploadError } = await supabase.storage.from('catalog-photos').upload(storagePath, file, { contentType: file.type });
      if (uploadError) { setMessage(`No s’ha pogut pujar la fotografia: ${uploadError.message}`, true); return; }
-     const { error: metadataError } = await supabase.from('object_photos').insert({ object_id: objectId, storage_path: storagePath, alt_text: altText, caption, position, uploaded_by: user.id });
+      const { error: metadataError } = await supabase.from('object_photos').insert({ object_id: objectId, storage_path: storagePath, alt_text: altText, caption: null, position, uploaded_by: user.id });
      if (metadataError) { await supabase.storage.from('catalog-photos').remove([storagePath]); setMessage(`No s’ha pogut desar la fotografia: ${metadataError.message}`, true); return; }
      form.reset(); setMessage('Fotografia pujada correctament.'); await refreshTeacherCatalogue();
     }
-    async function uploadStudentPhoto(event: Event, objectId: string, photos: ObjectPhoto[], userId: string) {
+     async function uploadStudentPhoto(event: Event, objectId: string, photos: ObjectPhoto[], userId: string) {
       event.preventDefault(); if (!supabase) return;
       const form = event.currentTarget as HTMLFormElement, data = new FormData(form), file = data.get('photo');
-      const altText = String(data.get('alt_text')).trim(), caption = String(data.get('caption')).trim() || null;
       const extension = file instanceof File ? ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' } as Record<string, string>)[file.type] : undefined;
-      if (!(file instanceof File) || !extension || file.size > 10 * 1024 * 1024 || altText.length < 4 || altText.length > 250) { setMessage('Afig una imatge JPEG, PNG o WebP de menys de 10 MiB i un text alternatiu de 4 a 250 caràcters.', true); return; }
-      const { data: { user } } = await supabase.auth.getUser(); if (!user) return;
+       if (!(file instanceof File) || !extension || file.size > 10 * 1024 * 1024) { setMessage('Afig una imatge JPEG, PNG o WebP de menys de 10 MiB.', true); return; }
+       const { data: { user } } = await supabase.auth.getUser(); if (!user) return;
+       const { data: object, error: objectError } = await supabase.from('catalog_objects').select('title').eq('id', objectId).single();
+       const title = object?.title.trim() || '';
+       if (objectError || !title) { setMessage('No s’ha pogut obtenir el títol de la fitxa per pujar la fotografia.', true); return; }
+       const altText = `Fotografia de ${title}`;
       const storagePath = `${user.id}/${crypto.randomUUID()}.${extension}`, position = photos.reduce((maximum, photo) => Math.max(maximum, photo.position ?? -1), -1) + 1;
       const { error: uploadError } = await supabase.storage.from('catalog-photos').upload(storagePath, file, { contentType: file.type });
       if (uploadError) { setMessage('No s’ha pogut pujar la fotografia.', true); return; }
-      const { error } = await supabase.from('object_photos').insert({ object_id: objectId, storage_path: storagePath, alt_text: altText, caption, position, uploaded_by: user.id });
+       const { error } = await supabase.from('object_photos').insert({ object_id: objectId, storage_path: storagePath, alt_text: altText, caption: null, position, uploaded_by: user.id });
       if (error) { await supabase.storage.from('catalog-photos').remove([storagePath]); setMessage('No s’han pogut desar les dades de la fotografia.', true); return; }
       setMessage('Fotografia pujada correctament.'); await loadStudent(userId);
     }
@@ -678,12 +685,14 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}${manage
   .dashboard-summary-heading { display:flex; align-items:end; justify-content:space-between; gap:1rem 2rem; margin-bottom:1rem; }
   .dashboard-summary-heading h3 { margin-bottom:0; }
   .dashboard-summary-heading > p { max-width:27rem; margin:0; color:var(--muted); font-size:.9rem; }
-  .dashboard-summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); }
-  .summary-card { display:flex; flex-direction:column; min-height:11rem; padding:1rem; background:var(--paper-deep); text-decoration:none; }
-  .summary-card:hover { background:#e4f3df; }
+   .dashboard-summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; }
+   .summary-card { position:relative; display:flex; flex-direction:column; min-height:11rem; padding:1rem; background:var(--paper-deep); border:1px solid var(--line); overflow:hidden; text-decoration:none; }
+    .summary-card:hover { background:var(--active); }
   .summary-card > span,.summary-card small { font:500 .7rem 'DM Mono',monospace; letter-spacing:.02em; }
   .summary-card strong { margin:.6rem 0 auto; font:700 clamp(2.4rem,4vw,4rem) Outfit,sans-serif; letter-spacing:-.06em; line-height:1; }
-  .summary-card small { color:var(--muted); line-height:1.35; }
+   .summary-card small { color:var(--muted); line-height:1.35; }
+    .summary-card[data-summary-attention] { border-color:color-mix(in srgb, var(--accent) 68%, var(--line)); box-shadow:inset 3px 0 0 var(--accent); }
+    .summary-card[data-summary-attention]::after { position:absolute; inset:0; content:""; pointer-events:none; opacity:.24; background:repeating-linear-gradient(0deg, transparent 0 4px, color-mix(in srgb, var(--accent) 22%, transparent) 4px 5px); }
   @media (max-width:900px) { .dashboard-summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   @media (max-width:700px) { .dashboard-summary-heading { display:block; }.dashboard-summary-heading > p { margin-top:.75rem; }.dashboard-summary-grid { grid-template-columns:1fr; }.summary-card { min-height:8.5rem; } }
   /* Una sola interfície operativa amb presentacions segons la ruta. */
