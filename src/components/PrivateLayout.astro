@@ -15,12 +15,13 @@ const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
     </header>
     <nav class="private-nav" data-private-navigation aria-label="Navegació de gestió" hidden><a href={href('/espai/')} aria-current={current === 'space' ? 'page' : undefined}><span data-private-space-student>El meu espai</span><span data-private-space-management hidden>Resum administratiu</span></a><a href={href('/perfil/')} aria-current={current === 'profile' ? 'page' : undefined}>Perfil</a><a href={href('/gestio-persones/')} data-private-management hidden aria-current={current === 'usuaris' ? 'page' : undefined}>Usuaris</a><a href={href('/gestio-cataleg/')} data-private-management hidden aria-current={current === 'cataleg' ? 'page' : undefined}>Catàleg</a><a href={href('/gestio-personatges/')} data-private-management hidden aria-current={current === 'fitxes' ? 'page' : undefined}>Fitxes</a><a href={href('/gestio-donacions/')} data-private-management hidden aria-current={current === 'donacions' ? 'page' : undefined}>Donacions</a></nav>
     <main id="contingut-privat" data-private-content tabindex="-1" hidden><slot /></main>
-    <p class="private-service-notice" data-private-service-notice hidden role="status"><span data-private-service-message></span> <a href={href('/col·labora/')}>Torna a l’accés</a></p>
+    <section class="private-service-notice" data-private-service-notice hidden aria-labelledby="private-service-title"><h1 id="private-service-title">Accés no disponible</h1><p data-private-service-message></p><p><button class="link-button" type="button" data-private-restricted-signout>Tanca sessió</button> · <a href={href('/col·labora/')}>Torna a l’accés</a></p></section>
     <script>
       import { supabase } from '../lib/supabase';
       const base = import.meta.env.BASE_URL;
       const initials = (value: string) => value.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase() || '?';
        const notice = (text: string) => { const target = document.querySelector<HTMLElement>('[data-private-service-notice]'); const message = document.querySelector<HTMLElement>('[data-private-service-message]'); if (target && message) { message.textContent = text; target.hidden = false; } };
+       const lockPrivateUI = () => { document.querySelector<HTMLElement>('[data-private-navigation]')?.replaceChildren(); document.querySelector<HTMLElement>('[data-private-content]')?.replaceChildren(); };
        async function account() {
          if (!supabase) { notice('El servei de compte no està disponible ara mateix.'); return; }
          try {
@@ -29,11 +30,14 @@ const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
             if (!session) { window.location.replace(`${base}col·labora/`); return; }
             const { data: { user }, error: userError } = await supabase.auth.getUser();
             if (userError || !user) { window.location.replace(`${base}col·labora/`); return; }
-           const [{ data: profile, error: profileError }, { data: administrator, error: administratorError }] = await Promise.all([
-             supabase.from('profiles').select('display_name, role, avatar_path').eq('id', session.user.id).maybeSingle(),
-             supabase.rpc('is_administrator')
-           ]);
-           if (profileError || administratorError) throw profileError || administratorError;
+            const [{ data: activeConfirmed, error: activeError }, { data: profile, error: profileError }, { data: administrator, error: administratorError }] = await Promise.all([
+              supabase.rpc('is_active_confirmed_user'),
+              supabase.from('profiles').select('display_name, role, avatar_path, account_status').eq('id', session.user.id).maybeSingle(),
+              supabase.rpc('is_administrator')
+            ]);
+            if (activeError || profileError || administratorError) throw activeError || profileError || administratorError;
+            if (!user.email_confirmed_at) { lockPrivateUI(); notice('Confirma el teu correu electrònic abans d’accedir a l’espai privat.'); return; }
+            if (activeConfirmed !== true) { lockPrivateUI(); notice(profile?.account_status === 'suspended' ? 'Aquest compte està suspés. Si creus que és un error, contacta amb el centre.' : 'Aquest compte no està actiu. Contacta amb el centre per revisar-ne l’accés.'); return; }
            const name = profile?.display_name || session.user.email || 'Compte';
            document.querySelector<HTMLElement>('[data-private-name]')!.textContent = name;
            const avatar = document.querySelector<HTMLElement>('[data-private-avatar]')!;
@@ -49,11 +53,13 @@ const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
             document.querySelector<HTMLElement>('[data-private-account]')!.hidden = false;
             document.querySelector<HTMLElement>('[data-private-navigation]')!.hidden = false;
             document.querySelector<HTMLElement>('[data-private-content]')!.hidden = false;
-         } catch {
-           notice('No s’ha pogut carregar el teu compte. Pots tornar a intentar l’accés.');
+          } catch {
+            lockPrivateUI();
+            notice('No s’ha pogut carregar el teu compte. Pots tornar a intentar l’accés.');
          }
        }
-      document.querySelector<HTMLButtonElement>('[data-private-signout]')?.addEventListener('click', async () => { await supabase?.auth.signOut(); window.location.assign(`${base}col·labora/`); });
+       document.querySelector<HTMLButtonElement>('[data-private-signout]')?.addEventListener('click', async () => { await supabase?.auth.signOut(); window.location.assign(`${base}col·labora/`); });
+       document.querySelector<HTMLButtonElement>('[data-private-restricted-signout]')?.addEventListener('click', async () => { await supabase?.auth.signOut(); window.location.assign(`${base}col·labora/`); });
       account();
     </script>
   </body>
