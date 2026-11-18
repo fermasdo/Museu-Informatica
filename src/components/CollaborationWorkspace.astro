@@ -31,10 +31,10 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}${manage
         <section class="dashboard-summary" aria-labelledby="admin-summary-title">
           <div class="dashboard-summary-heading"><div><p class="eyebrow" data-teacher-summary-label>GESTIÓ</p><h3 id="admin-summary-title">Resum administratiu</h3></div><p>Accés ràpid a les tasques que requereixen atenció.</p></div>
           <div class="dashboard-summary-grid">
-            <a class="summary-card" href={`${managementHref('cataleg')}?status=pending_review`} data-summary-actionable="pending_review"><span>Fitxes pendents</span><strong data-summary-count="pending_review">Carregant…</strong><small>Obri la gestió de fitxes pendents</small></a>
+            <a class="summary-card" href={`${managementHref('cataleg')}?status=pending_review`} data-summary-actionable="pending_review"><span>Fitxes catàleg pendents</span><strong data-summary-count="pending_review">Carregant…</strong><small>Obri la gestió de fitxes pendents</small></a>
             <a class="summary-card" href={`${managementHref('donacions')}?donations=open`} data-summary-actionable="donations"><span>Donacions obertes</span><strong data-summary-count="donations">Carregant…</strong><small>Filtra les propostes noves i contactades</small></a>
             <a class="summary-card" href={mode === 'space' ? '#gestio-perfils' : `${managementHref('usuaris')}?profile=pending`} data-summary-actionable="profiles" data-summary-profile-filter={mode === 'space' ? 'pending' : undefined}><span data-summary-users-label>Usuaris pendents</span><strong data-summary-count="profiles">Carregant…</strong><small>Filtra els perfils pendents d’aprovació</small></a>
-            <a class="summary-card" href={`${managementHref('cataleg')}?status=archived`}><span>Fitxes arxivades</span><strong data-summary-count="archived">Carregant…</strong><small>Obri la gestió de fitxes arxivades</small></a>
+            <a class="summary-card" href={`${managementHref('fitxes')}?status=draft`} data-summary-actionable="figures"><span>Fitxes personatges pendents</span><strong data-summary-count="figures">Carregant…</strong><small>Obri les fitxes de personatges en esborrany</small></a>
           </div>
           <p class="sr-only" data-summary-status role="status" aria-live="polite"></p>
         </section>
@@ -227,7 +227,7 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}${manage
          (isAdministrator
            ? supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending')
            : supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student').eq('approval_status', 'pending')),
-         supabase.from('catalog_objects').select('*', { count: 'exact', head: true }).eq('status', 'archived')
+          supabase.from('historical_figures').select('*', { count: 'exact', head: true }).eq('status', 'draft')
        ]);
         const [profiles, proposals, types, cabinets, donations] = await Promise.all([
         (isAdministrator
@@ -238,8 +238,8 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}${manage
          canManageCatalogue ? supabase.from('cabinets').select('id, code, building, cabinet, shelf, notes').order('code') : Promise.resolve({ data: [], error: null }),
           canManageCatalogue ? supabase.from('donation_contacts').select('id, name, email, phone, message, status, created_at').order('created_at', { ascending: false }) : Promise.resolve({ data: [], error: null })
      ]);
-        const [pendingReviewCount, donationCount, profileCount, archivedCount] = await summaryCounts;
-          ([['pending_review', pendingReviewCount], ['donations', donationCount], ['profiles', profileCount], ['archived', archivedCount]] as const).forEach(([key, result]) => {
+         const [pendingReviewCount, donationCount, profileCount, figureCount] = await summaryCounts;
+           ([['pending_review', pendingReviewCount], ['donations', donationCount], ['profiles', profileCount], ['figures', figureCount]] as const).forEach(([key, result]) => {
             const target = document.querySelector<HTMLElement>(`[data-summary-count="${key}"]`);
             if (target) target.textContent = result.error || result.count === null ? 'No disponible' : String(result.count);
             const card = document.querySelector<HTMLElement>(`[data-summary-actionable="${key}"]`);
@@ -661,9 +661,9 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}${manage
        focusHashTarget();
        requestAnimationFrame(() => filter?.focus({ preventScroll: true }));
       }));
-       if (mode === 'space') document.querySelectorAll<HTMLAnchorElement>('.summary-card').forEach(card => {
-         if (!card.dataset.summaryDonationFilter && !card.dataset.summaryProfileFilter) card.href = `${import.meta.env.BASE_URL}gestio-cataleg/${card.search}`;
-      });
+        if (mode === 'space') document.querySelectorAll<HTMLAnchorElement>('.summary-card').forEach(card => {
+          if (!card.dataset.summaryDonationFilter && !card.dataset.summaryProfileFilter && card.dataset.summaryActionable !== 'figures') card.href = `${import.meta.env.BASE_URL}gestio-cataleg/${card.search}`;
+        });
       document.querySelectorAll<HTMLInputElement>('[data-contact-name]').forEach(input => { input.minLength = 2; input.maxLength = 150; if (!input.parentElement?.querySelector('[data-contact-name-help]')) { const help = document.createElement('p'); help.className = 'form-note'; help.dataset.contactNameHelp = ''; help.textContent = 'Indica el nom complet de la persona vinculada, entre 2 i 150 caràcters. Aquesta dada és privada i només s’utilitza per gestionar la procedència de la peça.'; input.parentElement?.after(help); } });
       document.querySelectorAll<HTMLSelectElement>('[data-provenance-select]').forEach(select => { const form = select.closest<HTMLFormElement>('form'); if (!form) return; select.addEventListener('change', () => syncProvenance(form)); syncProvenance(form); });
      $('[data-object-form]').addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget as HTMLFormElement; const { data: { user } } = await supabase!.auth.getUser(); if (!user) return; const { object, error } = await saveCatalogueObject(form, null, true); if (!error && object) { try { await saveObjectTags(object.id, form); } catch (tagError) { setMessage(`Esborrany desat, però no les etiquetes: ${tagError instanceof Error ? tagError.message : 'error desconegut'}`, true); return; } } setMessage(error ? error.message : `Esborrany desat amb el codi ${object?.inventory_code}.`, !!error); if (!error) { form.reset(); await loadStudent(user.id); } });
@@ -708,10 +708,13 @@ const managementHref = (section: string) => `${import.meta.env.BASE_URL}${manage
   .collaboration-workspace--manage > .collaborate,
   .collaboration-workspace--manage > .form-layout,
   .collaboration-workspace--manage .profile-card,
-  .collaboration-workspace--manage [data-student-dashboard] { display:none !important; }
-  .collaboration-workspace--space [data-teacher-dashboard] > :not(.dashboard-summary) { display:none; }
+  .collaboration-workspace--manage [data-student-dashboard],
+  .collaboration-workspace--manage [data-message] { display:none !important; }
+   .collaboration-workspace--space [data-teacher-dashboard] > :not(.dashboard-summary) { display:none; }
    .collaboration-workspace--space .account-area { padding-top:0; }
-   .object-history { width:100%; }
+   .collaboration-workspace--manage .account-area { padding-top:0; }
+   .collaboration-workspace--manage .dashboard { margin-top:0; }
+    .object-history { width:100%; }
    .object-history-content { padding-top:.75rem; }
    .object-history ol { display:grid; gap:.6rem; margin:.75rem 0; padding-left:1.4rem; }
     .object-history li > * { display:block; }
