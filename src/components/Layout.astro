@@ -2,7 +2,7 @@
 import '../styles/global.css';
 const { title = 'Museu d’Informàtica', description = 'Museu d’Informàtica de l’IES l’Estació, Ontinyent.' } = Astro.props;
 const path = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '') || '/';
-const nav = [['/', 'Inici'], ['/cataleg/', 'Catàleg'], ['/personatges/', 'Personatges'], ['/recorreguts/', 'Recorreguts'], ['/laboratori/', 'Laboratori'], ['/col·labora/', 'Col·labora']];
+const nav = [['/cataleg/', 'Catàleg'], ['/personatges/', 'Personatges'], ['/recorreguts/', 'Recorreguts'], ['/laboratori/', 'Laboratori'], ['/col·labora/', 'Col·labora']];
 const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
 const isCurrent = (route: string) => path === route || (route === '/cataleg/' && path.startsWith('/cataleg/'));
 ---
@@ -12,7 +12,7 @@ const isCurrent = (route: string) => path === route || (route === '/cataleg/' &&
   <body>
     <a class="skip-link" href="#contingut">Vés al contingut principal</a>
     <header class="site-header">
-      <a class="brand" href={import.meta.env.BASE_URL} aria-label="Museu d’Informàtica, inici"><svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 32V8h7l9 11 9-11h7v24h-7V18l-9 10-9-10v14z"/><path d="M9 5h22"/></svg><span>Museu<br /><b>d’Informàtica</b></span></a>
+      <a class="brand brand--header" href={import.meta.env.BASE_URL} aria-label="Museu d’Informàtica, inici"><svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 32V8h7l9 11 9-11h7v24h-7V18l-9 10-9-10v14z"/><path d="M9 5h22"/></svg><span>Museu d’Informàtica<br /><b>IES l’Estació</b></span></a>
       <nav class="desktop-navigation" aria-label="Navegació principal"><ul>{nav.map(([route, label]) => <li><a href={href(route)} aria-current={isCurrent(route) ? 'page' : undefined}>{label}</a></li>)}</ul></nav>
       <div class="header-controls">
         <details class="account-menu" data-account-menu>

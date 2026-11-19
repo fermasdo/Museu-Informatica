@@ -64,6 +64,9 @@
 @media (max-width:700px) {
   .site-header { min-height:64px; }
   .brand { flex:1 1 auto; min-width:0; }
+  .site-header .brand--header { gap:.6rem; font-size:.78rem; }
+  .site-header .brand--header .brand-mark { width:3rem; height:3rem; padding:.45rem; }
+  .site-header .brand--header b { font-size:1rem; }
   .header-controls { flex:0 0 auto; gap:.25rem; }
   .account-menu { order:1; }
   .navigation-menu { order:2; }
@@ -78,7 +81,7 @@
 .figure-sheet { max-width:210mm; margin:0 auto; }.figure-sheet-header,.figure-sheet-footer { display:flex; justify-content:space-between; gap:1rem; padding-block:.8rem; border-block:1px solid var(--line); font:500 .65rem 'DM Mono',monospace; color:var(--muted); }.figure-sheet-header .eyebrow { margin:0; }.figure-detail-hero { display:grid; grid-template-columns:minmax(12rem,.7fr) minmax(0,1.3fr); gap:clamp(1.5rem,5vw,4rem); align-items:start; padding-block:clamp(2rem,5vw,4rem); }.figure-portrait { display:grid; place-items:center; aspect-ratio:4/5; overflow:hidden; border:1px solid var(--line); background:var(--surface-raised); color:var(--accent); font:clamp(4rem,12vw,8rem)/1 'DM Mono',monospace; }.figure-portrait img { width:100%; height:100%; object-fit:cover; }.figure-detail h1 { max-width:12ch; }.figure-editorial { display:grid; grid-template-columns:1.3fr .7fr; gap:clamp(1.5rem,5vw,4rem); padding-block:2rem; border-top:1px solid var(--line); }.figure-editorial section > div { color:var(--muted); }.figure-sources { max-width:42rem; padding-block:2rem; border-top:1px solid var(--line); }.figure-sources ol { padding-left:1.25rem; }.figure-sources li { margin:.5rem 0; }.figure-sources a { text-underline-offset:3px; }.figure-sheet-footer { margin-top:2rem; border-bottom:0; }.figure-management .figure-form { max-width:54rem; }.figure-sources-editor { margin:1rem 0; border:1px solid var(--line); }.figure-sources-editor legend { padding:0 .25rem; font:500 .78rem 'DM Mono',monospace; }.figure-sources-editor .form-note { padding-inline:.8rem; }.figure-sources-editor textarea { margin:.35rem .8rem .8rem; width:calc(100% - 1.6rem); }
 .fallback-sheet { display:none; }.fallback-sheet:target { display:block; }.js .fallback-sheet:target { display:none; }.fallback-sheet .figure-editorial section > p { color:var(--muted); }
 @media (max-width:700px) { .figures-filters,.figure-detail-hero,.figure-editorial { grid-template-columns:1fr; }.figures-filters .filter-reset { justify-self:start; }.figures-grid { grid-template-columns:1fr; }.figure-sheet-header,.figure-sheet-footer { align-items:flex-start; flex-direction:column; gap:.25rem; } }
-@media print { @page { size:A4 portrait; margin:15mm; } .site-header,.site-footer,.skip-link,.no-print,.figure-detail > .form-message,.figure-sources { display:none!important; } html,body { background:#fff!important; color:#111!important; font-size:10.5pt; print-color-adjust:exact; -webkit-print-color-adjust:exact; } main,.detail-page,.figure-detail { max-width:none!important; margin:0!important; padding:0!important; } .figure-sheet { display:block!important; max-width:none!important; print-color-adjust:exact; -webkit-print-color-adjust:exact; } .figure-sheet-header,.figure-sheet-footer { color:#315a3a!important; }.figure-sheet .eyebrow { color:#315a3a!important; }.figure-sheet em { color:#3c7d28!important; }.figure-editorial section > div { color:#333!important; }.figure-sheet-header,.figure-sheet-footer,.figure-editorial,.figure-portrait { border-color:#555!important; } .figure-detail-hero { grid-template-columns:60mm minmax(0,1fr); gap:10mm; padding:8mm 0; }.figure-portrait { aspect-ratio:4/5; background:var(--surface-raised)!important; }.figure-editorial { grid-template-columns:minmax(0,1fr) minmax(68mm,1fr); gap:8mm; padding-block:7mm; }.figure-editorial section > :is(div,p) { font-size:12pt; line-height:1.5; }.figure-editorial section:last-child h2 { white-space:nowrap; font-size:14pt; }.figure-editorial { break-inside:avoid; }.figure-sheet-footer { position:fixed; bottom:0; left:0; right:0; } }
+@media print { @page { size:A4 portrait; margin:15mm; } .site-header,.site-footer,.skip-link,.no-print,.figure-detail > .form-message { display:none!important; } html,body { background:#fff!important; color:#111!important; font-size:10.5pt; print-color-adjust:exact; -webkit-print-color-adjust:exact; } main,.detail-page,.figure-detail { max-width:none!important; margin:0!important; padding:0!important; } .figure-sheet { display:block!important; max-width:none!important; print-color-adjust:exact; -webkit-print-color-adjust:exact; } .figure-sheet-header,.figure-sheet-footer { color:#315a3a!important; }.figure-sheet .eyebrow { color:#315a3a!important; }.figure-sheet em { color:#3c7d28!important; }.figure-editorial section > div { color:#333!important; }.figure-sheet-header,.figure-sheet-footer,.figure-editorial,.figure-portrait { border-color:#555!important; } .figure-detail-hero { grid-template-columns:60mm minmax(0,1fr); gap:10mm; padding:8mm 0; }.figure-portrait { aspect-ratio:4/5; background:var(--surface-raised)!important; }.figure-editorial { grid-template-columns:minmax(0,1fr) minmax(68mm,1fr); gap:8mm; padding-block:7mm; }.figure-editorial section > :is(div,p) { font-size:12pt; line-height:1.5; }.figure-editorial section:last-child h2 { white-space:nowrap; font-size:14pt; }.figure-editorial { break-inside:avoid; }.figure-sheet-footer { position:fixed; bottom:0; left:0; right:0; } }
 
 
 /* La navegació d'escriptori no depén de l'estat d'un element <details>. */
@@ -97,6 +100,9 @@
 /* Sistema visual terminal: superfícies fosques, contrast alt i context inequívoc. */
 .site-header,.private-header { border-color:var(--line); }
 .brand-mark { background:var(--surface-raised); fill:var(--accent); stroke:var(--accent); }
+.site-header .brand--header { gap:1.2rem; font-size:1.52rem; }
+.site-header .brand--header .brand-mark { width:4.5rem; height:4.5rem; padding:.7rem; }
+.site-header .brand--header b { font-size:2rem; }
 .brand,.eyebrow,.lead,.site-footer p,.form-note,.piece-index,.piece-image-credit,.result-count,.photo-fallback,.empty-results,.detail-meta dt,.detail-visual[data-gallery] figcaption { color:var(--muted); }
 .lead { color:var(--muted); }
 .site-header nav a,.desktop-navigation a,.navigation-panel nav a { position:relative; display:inline-flex; align-items:center; min-height:44px; padding:.55rem .65rem; color:var(--text); }
@@ -191,6 +197,10 @@ select { color-scheme:dark; }
   .navigation-panel nav a { padding:.65rem .75rem; border-bottom-color:var(--line); }
 }
 
+@media (max-width:360px) {
+  .site-header .account-menu summary [data-access-status] { display:none; }
+}
+
 /* Curvatura CRT: superfícies de monitor, sense retallar els anells de focus. */
 .participate,.activity-grid article,.collaborate article,.pathways a,.route-grid article,.lab-grid article,.info-page,.form-layout form,.auth-grid form,.figure-card,.figure-portrait,.account-menu-panel,.navigation-panel,dialog,.config-notice,.return-to-draft-panel,.student-review-feedback,.bulk-actions { border-radius:var(--radius-monitor); }
 .account-menu summary,.navigation-menu summary,.site-header nav a[aria-current="page"],.desktop-navigation a[aria-current="page"],.navigation-panel nav a[aria-current="page"],.private-nav a[aria-current="page"],.management-sections a[aria-current="page"] { border-radius:var(--radius-monitor-sm); }
@@ -222,8 +232,8 @@ select { color-scheme:dark; }
 .piece-content,.figure-card-body { flex:1; padding:1rem .375rem 1.125rem; }
 .piece-card h3,.figure-card h2,.piece-card h3 a,.figure-card h2 a,.piece-card h3 a:visited,.figure-card h2 a:visited { text-decoration:none; }
 .piece-card h3,.figure-card h2 { margin-bottom:.6rem; }
-.piece-image-credit,.figure-image-credit { margin:.15rem 1rem 1rem; color:var(--muted); font:500 .67rem 'DM Mono',monospace; }
-.figure-image-credit { min-height:24px; }
+.piece-image-credit { margin:.15rem 1rem 1rem; color:var(--muted); font:500 .67rem 'DM Mono',monospace; }
+.figures-page .figure-image-credit { display:none; }
 @media (min-width:701px) and (max-width:980px) { .pieces-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .figures-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:700px) { .pieces-grid { grid-template-columns:1fr; } .figures-grid { grid-template-columns:1fr; } }
 @media (min-width:600px) and (max-width:899px) { .catalogue-query-search { grid-column:1 / -1; } }
@@ -236,7 +246,7 @@ select { color-scheme:dark; }
 
 /* Els retrats reserven la proporció editorial encara que no hi haja imatge. */
 .figure-card-visual { aspect-ratio:4 / 5; background:var(--surface-raised); }
-.figure-card-visual img { width:100%; height:100%; object-fit:cover; }
+.figure-card-visual img { display:block; width:100%; min-width:100%; height:100%; min-height:100%; object-fit:cover; object-position:center; }
 
 /* Accions de la fitxa: el botó no adopta la curvatura de les superfícies. */
 .detail-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.5rem; margin-top:1rem; }

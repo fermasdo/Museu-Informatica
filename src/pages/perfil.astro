@@ -1,6 +1,135 @@
 ---
 import PrivateLayout from '../components/PrivateLayout.astro';
 ---
-<PrivateLayout title="Edita el perfil" current="profile"><section class="private-page"><p class="eyebrow">COMPTE</p><h1 tabindex="-1">Edita el perfil</h1><p class="form-message" data-profile-message role="status" aria-live="polite"></p><form class="data-form profile-form" data-profile-form hidden><div class="profile-avatar-preview" data-profile-avatar aria-hidden="true">?</div><label>Nom per mostrar<input name="display_name" autocomplete="name" minlength="2" maxlength="100" required /></label><label>Imatge de perfil <input name="avatar" type="file" accept="image/jpeg,image/png,image/webp" /></label><p class="form-note">JPEG, PNG o WebP; màxim 2 MB.</p><button class="button" type="submit">Desar perfil</button></form></section><script>
-import { supabase } from '../lib/supabase'; const form=document.querySelector<HTMLFormElement>('[data-profile-form]')!, msg=document.querySelector<HTMLElement>('[data-profile-message]')!, avatar=document.querySelector<HTMLElement>('[data-profile-avatar]')!; const say=(text:string,error=false)=>{msg.textContent=text;msg.classList.toggle('is-error',error)}; const initials=(v:string)=>v.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()||'?'; let currentPath:string|null=null; async function load(){if(!supabase)return;const {data:{session}}=await supabase.auth.getSession();if(!session)return;const {data:profile}=await supabase.from('profiles').select('display_name, avatar_path').eq('id',session.user.id).maybeSingle();if(!profile){say('No s’ha pogut carregar el perfil.',true);return}currentPath=profile.avatar_path;form.hidden=false;(form.elements.namedItem('display_name') as HTMLInputElement).value=profile.display_name;avatar.textContent=initials(profile.display_name);if(profile.avatar_path){const {data}=await supabase.storage.from('profile-avatars').createSignedUrl(profile.avatar_path,3600);if(data?.signedUrl){const image=new Image(80,80);image.alt='';image.src=data.signedUrl;image.onload=()=>avatar.replaceChildren(image)}}document.querySelector('h1')?.focus()} form.addEventListener('submit',async e=>{e.preventDefault();if(!supabase||!form.reportValidity())return;const {data:{user}}=await supabase.auth.getUser();if(!user)return;const data=new FormData(form),name=String(data.get('display_name')).trim(),file=data.get('avatar');const ext=file instanceof File?({'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}as Record<string,string>)[file.type]:undefined;if(name.length<2||name.length>100||file instanceof File&&file.size&&(!ext||file.size>2*1024*1024)){say('Revisa el nom i la imatge (JPEG, PNG o WebP, màxim 2 MB).',true);return}let next=currentPath,uploaded:string|null=null;if(file instanceof File&&file.size&&ext){uploaded=`${user.id}/${crypto.randomUUID()}.${ext}`;const {error}=await supabase.storage.from('profile-avatars').upload(uploaded,file,{contentType:file.type});if(error){say('No s’ha pogut pujar la imatge.',true);return}next=uploaded}else if(data.get('remove_avatar')==='on')next=null;const {error}=await supabase.from('profiles').update({display_name:name,avatar_path:next}).eq('id',user.id);if(error){if(uploaded)await supabase.storage.from('profile-avatars').remove([uploaded]);say('No s’ha pogut actualitzar el perfil.',true);return}if(currentPath&&currentPath!==next)await supabase.storage.from('profile-avatars').remove([currentPath]);currentPath=next;say('Perfil actualitzat.');await load()});load();
-</script></PrivateLayout>
+<PrivateLayout title="Edita el perfil" current="profile">
+  <section class="private-page">
+    <p class="eyebrow">COMPTE</p>
+    <h1 tabindex="-1">Edita el perfil</h1>
+    <p class="form-message" data-profile-message role="status" aria-live="polite"></p>
+
+    <section class="participation-summary" data-participation-summary hidden aria-labelledby="participation-title">
+      <div><p class="eyebrow">PARTICIPACIÓ</p><h2 id="participation-title">La teua activitat</h2></div>
+      <dl>
+        <div><dt>Fitxes de catàleg creades</dt><dd data-participation-catalogue>—</dd></div>
+        <div><dt>Fitxes de personatges creades</dt><dd data-participation-figures>—</dd></div>
+        <div><dt>Aprovacions d'aportacions d'alumnat</dt><dd data-participation-approvals>—</dd></div>
+      </dl>
+    </section>
+
+    <form class="data-form profile-form" data-profile-form hidden>
+      <div class="profile-avatar-preview" data-profile-avatar aria-hidden="true">?</div>
+      <label>Nom per mostrar<input name="display_name" autocomplete="name" minlength="2" maxlength="100" required /></label>
+      <label>Imatge de perfil <input name="avatar" type="file" accept="image/jpeg,image/png,image/webp" /></label>
+      <p class="form-note">JPEG, PNG o WebP; màxim 2 MB.</p>
+      <button class="button" type="submit">Desar perfil</button>
+    </form>
+  </section>
+
+  <script>
+    import { supabase } from '../lib/supabase';
+
+    const form = document.querySelector<HTMLFormElement>('[data-profile-form]')!;
+    const message = document.querySelector<HTMLElement>('[data-profile-message]')!;
+    const avatar = document.querySelector<HTMLElement>('[data-profile-avatar]')!;
+    const participation = document.querySelector<HTMLElement>('[data-participation-summary]')!;
+    let currentPath: string | null = null;
+
+    const say = (text: string, error = false) => { message.textContent = text; message.classList.toggle('is-error', error); };
+    const initials = (value: string) => value.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase() || '?';
+    const setParticipation = (name: string, value: number | null) => {
+      const target = document.querySelector<HTMLElement>(`[data-participation-${name}]`);
+      if (target) target.textContent = value === null ? '—' : String(value);
+    };
+
+    async function loadParticipation(userId: string, canManage: boolean) {
+      if (!supabase) return;
+      const catalogueRequest = supabase.from('catalog_objects').select('*', { count: 'exact', head: true }).eq('created_by', userId);
+      const figuresRequest = canManage
+        ? supabase.from('historical_figures').select('*', { count: 'exact', head: true }).eq('created_by', userId)
+        : Promise.resolve({ count: 0, error: null });
+      const approvalsRequest = canManage
+        ? supabase.from('catalog_objects').select('id, profiles!catalog_objects_created_by_fkey!inner(role)', { count: 'exact', head: true }).eq('reviewed_by', userId).eq('status', 'published').eq('profiles.role', 'student')
+        : Promise.resolve({ count: 0, error: null });
+      const [catalogue, figures, approvals] = await Promise.all([catalogueRequest, figuresRequest, approvalsRequest]);
+      setParticipation('catalogue', catalogue.error || catalogue.count === null ? null : catalogue.count);
+      setParticipation('figures', figures.error || figures.count === null ? null : figures.count);
+
+      setParticipation('approvals', approvals.error || approvals.count === null ? null : approvals.count);
+      participation.hidden = false;
+    }
+
+    async function renderAvatar(path: string | null, displayName: string) {
+      avatar.replaceChildren();
+      avatar.textContent = initials(displayName);
+      if (!supabase || !path) return;
+      const { data } = await supabase.storage.from('profile-avatars').createSignedUrl(path, 3600);
+      if (!data?.signedUrl) return;
+      const image = new Image(80, 80);
+      image.alt = '';
+      image.src = data.signedUrl;
+      image.onload = () => avatar.replaceChildren(image);
+    }
+
+    async function load() {
+      if (!supabase) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const [{ data: profile }, { data: administrator }] = await Promise.all([
+        supabase.from('profiles').select('display_name, avatar_path, role').eq('id', session.user.id).maybeSingle(),
+        supabase.rpc('is_administrator')
+      ]);
+      if (!profile) { say('No s’ha pogut carregar el perfil.', true); return; }
+      currentPath = profile.avatar_path;
+      form.hidden = false;
+      (form.elements.namedItem('display_name') as HTMLInputElement).value = profile.display_name;
+      await renderAvatar(profile.avatar_path, profile.display_name);
+      await loadParticipation(session.user.id, profile.role === 'teacher' || administrator === true);
+      document.querySelector('h1')?.focus();
+    }
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!supabase || !form.reportValidity()) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const data = new FormData(form);
+      const displayName = String(data.get('display_name')).trim();
+      const file = data.get('avatar');
+      const extension = file instanceof File ? ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' } as Record<string, string>)[file.type] : undefined;
+      if (displayName.length < 2 || displayName.length > 100 || (file instanceof File && file.size && (!extension || file.size > 2 * 1024 * 1024))) {
+        say('Revisa el nom i la imatge (JPEG, PNG o WebP, màxim 2 MB).', true);
+        return;
+      }
+      let nextPath = currentPath;
+      let uploadedPath: string | null = null;
+      if (file instanceof File && file.size && extension) {
+        uploadedPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+        const { error } = await supabase.storage.from('profile-avatars').upload(uploadedPath, file, { contentType: file.type, upsert: false });
+        if (error) { say('No s’ha pogut pujar la imatge.', true); return; }
+        nextPath = uploadedPath;
+      }
+      const { error } = await supabase.from('profiles').update({ display_name: displayName, avatar_path: nextPath }).eq('id', user.id);
+      if (error) {
+        if (uploadedPath) await supabase.storage.from('profile-avatars').remove([uploadedPath]);
+        say('No s’ha pogut actualitzar el perfil.', true);
+        return;
+      }
+      if (currentPath && currentPath !== nextPath) await supabase.storage.from('profile-avatars').remove([currentPath]);
+      currentPath = nextPath;
+      await renderAvatar(nextPath, displayName);
+      say('Perfil actualitzat.');
+    });
+
+    void load();
+  </script>
+
+  <style>
+    .participation-summary { margin:2rem 0; padding:1.25rem; border:1px solid var(--line); background:var(--surface); }
+    .participation-summary h2 { margin-bottom:1.25rem; }
+    .participation-summary dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1px; margin:0; background:var(--line); border:1px solid var(--line); }
+    .participation-summary dl > div { min-height:8rem; padding:1rem; background:var(--surface-raised); }
+    .participation-summary dt { font:500 .7rem/1.35 'DM Mono',monospace; }
+    .participation-summary dd { margin:.75rem 0 0; font:700 clamp(2.2rem,4vw,3.5rem)/1 Outfit,sans-serif; letter-spacing:-.06em; }
+    @media (max-width:700px) { .participation-summary dl { grid-template-columns:1fr; gap:.65rem; background:transparent; border:0; }.participation-summary dl > div { border:1px solid var(--line); } }
+  </style>
+</PrivateLayout>
