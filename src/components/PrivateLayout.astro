@@ -13,7 +13,7 @@ const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
       <a class="return-link" href={import.meta.env.BASE_URL}>← Tornar al museu</a>
       <details class="account-menu" data-private-account hidden><summary><span class="account-avatar" data-private-avatar aria-hidden="true">?</span><span data-private-name>Compte</span></summary><div class="account-menu-panel"><button type="button" data-private-signout>Tanca sessió</button></div></details>
     </header>
-    <nav class="private-nav" data-private-navigation aria-label="Navegació de gestió" hidden><a href={href('/espai/')} aria-current={current === 'space' ? 'page' : undefined}><span data-private-space-student>El meu espai</span><span data-private-space-management hidden>Resum administratiu</span></a><a href={href('/perfil/')} aria-current={current === 'profile' ? 'page' : undefined}>Perfil</a><a href={href('/gestio-persones/')} data-private-management hidden aria-current={current === 'usuaris' ? 'page' : undefined}>Usuaris</a><a href={href('/gestio-cataleg/')} data-private-management hidden aria-current={current === 'cataleg' ? 'page' : undefined}>Catàleg</a><a href={href('/gestio-personatges/')} data-private-management hidden aria-current={current === 'fitxes' ? 'page' : undefined}>Fitxes</a><a href={href('/gestio-donacions/')} data-private-management hidden aria-current={current === 'donacions' ? 'page' : undefined}>Donacions</a></nav>
+    <nav class="private-nav" data-private-navigation aria-label="Navegació privada" hidden><a href={href('/espai/')} aria-current={current === 'space' ? 'page' : undefined}>El meu espai</a><a href={href('/perfil/')} aria-current={current === 'profile' ? 'page' : undefined}>Perfil</a><a href={href('/gestio-cataleg/')} data-private-student-management hidden aria-current={current === 'cataleg' ? 'page' : undefined}>Catàleg</a><a href={href('/gestio-personatges/')} data-private-student-management hidden aria-current={current === 'fitxes' ? 'page' : undefined}>Personatges</a><a href={href('/gestio-anuncis/')} data-private-student-management hidden aria-current={current === 'anuncis' ? 'page' : undefined}>Anuncis</a><a href={href('/gestio-persones/')} data-private-management hidden aria-current={current === 'usuaris' ? 'page' : undefined}>Usuaris</a><a href={href('/gestio-donacions/')} data-private-management hidden aria-current={current === 'donacions' ? 'page' : undefined}>Donacions</a></nav>
     <main id="contingut-privat" data-private-content tabindex="-1" hidden><slot /></main>
     <section class="private-service-notice" data-private-service-notice hidden aria-labelledby="private-service-title"><h1 id="private-service-title">Accés no disponible</h1><p data-private-service-message></p><p><button class="link-button" type="button" data-private-restricted-signout>Tanca sessió</button> · <a href={href('/col·labora/')}>Torna a l’accés</a></p></section>
     <script>
@@ -32,7 +32,7 @@ const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
             if (userError || !user) { window.location.replace(`${base}col·labora/`); return; }
             const [{ data: activeConfirmed, error: activeError }, { data: profile, error: profileError }, { data: administrator, error: administratorError }] = await Promise.all([
               supabase.rpc('is_active_confirmed_user'),
-              supabase.from('profiles').select('display_name, role, avatar_path, account_status').eq('id', session.user.id).maybeSingle(),
+              supabase.from('profiles').select('display_name, role, approval_status, avatar_path, account_status').eq('id', session.user.id).maybeSingle(),
               supabase.rpc('is_administrator')
             ]);
             if (activeError || profileError || administratorError) throw activeError || profileError || administratorError;
@@ -46,10 +46,10 @@ const href = (route: string) => `${import.meta.env.BASE_URL}${route.slice(1)}`;
              const { data, error } = await supabase.storage.from('profile-avatars').createSignedUrl(profile.avatar_path, 3600);
              if (!error && data?.signedUrl) { const image = new Image(40, 40); image.alt = ''; image.src = data.signedUrl; image.onload = () => avatar.replaceChildren(image); }
            }
-             const canManage = profile?.role === 'teacher' || administrator === true;
-             document.querySelectorAll<HTMLElement>('[data-private-management]').forEach(link => link.hidden = !canManage);
-             document.querySelector<HTMLElement>('[data-private-space-student]')!.hidden = canManage;
-             document.querySelector<HTMLElement>('[data-private-space-management]')!.hidden = !canManage;
+              const canManage = profile?.role === 'teacher' || administrator === true;
+              const approvedStudent = profile?.role === 'student' && profile.approval_status === 'approved';
+              document.querySelectorAll<HTMLElement>('[data-private-management]').forEach(link => link.hidden = !canManage);
+              document.querySelectorAll<HTMLElement>('[data-private-student-management], [data-space-student-management]').forEach(link => link.hidden = !(canManage || approvedStudent));
             document.querySelector<HTMLElement>('[data-private-account]')!.hidden = false;
             document.querySelector<HTMLElement>('[data-private-navigation]')!.hidden = false;
             document.querySelector<HTMLElement>('[data-private-content]')!.hidden = false;

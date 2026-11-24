@@ -1,7 +1,25 @@
 ---
 import PrivateLayout from '../../components/PrivateLayout.astro';
-import CollaborationWorkspace from '../../components/CollaborationWorkspace.astro';
 ---
 <PrivateLayout title="El meu espai" current="space">
-  <CollaborationWorkspace mode="space" />
+  <section class="private-page space-home" aria-labelledby="space-title">
+    <p class="eyebrow">EL MEU ESPAI</p>
+    <h1 id="space-title" tabindex="-1">Continua la teua col·laboració.</h1>
+    <p class="lead">Tria l’àrea on vols preparar o consultar les teues aportacions.</p>
+    <nav class="space-home-links" data-space-student-management aria-label="Àrees de col·laboració">
+      <a href={`${import.meta.env.BASE_URL}gestio-cataleg/`}><span class="eyebrow">COL·LECCIÓ</span><strong>Catàleg</strong><span>Gestiona les teues fitxes i propostes de millora.</span></a>
+      <a href={`${import.meta.env.BASE_URL}gestio-personatges/`}><span class="eyebrow">MEMÒRIA</span><strong>Personatges</strong><span>Crea i revisa les teues fitxes biogràfiques.</span></a>
+      <a href={`${import.meta.env.BASE_URL}gestio-anuncis/`}><span class="eyebrow">ARXIU AUDIOVISUAL</span><strong>Anuncis</strong><span>Envia propostes i consulta’n l’estat.</span></a>
+    </nav>
+  </section>
 </PrivateLayout>
+
+<style>
+  .space-home .lead { max-width:42rem; }
+  .space-home-links { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin-top:2rem; }
+  .space-home-links a { display:flex; flex-direction:column; min-height:13rem; padding:1.25rem; border:1px solid var(--line); background:var(--surface); color:inherit; text-decoration:none; }
+  .space-home-links a:hover { background:var(--active); }
+  .space-home-links strong { margin:.65rem 0 auto; font:700 1.8rem/1 Outfit,sans-serif; letter-spacing:-.04em; }
+  .space-home-links > a > span:last-child { color:var(--muted); font-size:.9rem; line-height:1.45; }
+  @media (max-width:800px) { .space-home-links { grid-template-columns:1fr; }.space-home-links a { min-height:0; } }
+</style>
